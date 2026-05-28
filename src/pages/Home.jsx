@@ -261,13 +261,13 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
-            height: '100%',
-            justifyContent: 'stretch'
+            justifyContent: 'flex-start'
           }}>
             {/* Vertical Banner 1 */}
             <div className="vertical-banner dark-theme-banner" style={{
-              flex: 1,
-              backgroundImage: 'url(/banner_vertical_sony.png)',
+              width: '100%',
+              aspectRatio: '1024/1536',
+              backgroundImage: 'url(/welcome_new_member_vertical.png)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -276,8 +276,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
               position: 'relative',
               overflow: 'hidden',
               cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)',
-              minHeight: '210px'
+              boxShadow: 'var(--shadow-sm)'
             }} onClick={() => selectCategory('sony_cam')}>
               <div className="banner-hover-overlay" style={{
                 position: 'absolute',
@@ -312,8 +311,9 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
 
             {/* Vertical Banner 2 */}
             <div className="vertical-banner light-theme-banner" style={{
-              flex: 1,
-              backgroundImage: 'url(/banner_vertical_lessor.png)',
+              width: '100%',
+              aspectRatio: '1024/1536',
+              backgroundImage: 'url(/new_member_discount_vertical.png)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -322,8 +322,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
               position: 'relative',
               overflow: 'hidden',
               cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)',
-              minHeight: '210px'
+              boxShadow: 'var(--shadow-sm)'
             }} onClick={() => {
               if (currentUserRole === 'renter') {
                 toggleUserRole();
@@ -375,7 +374,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
           
           {/* Horizontal Banner 1 */}
           <div className="horizontal-banner" style={{
-            backgroundImage: 'url(/banner_horizontal_studio.png)',
+            backgroundImage: 'url(/become_our_partner_horizontal.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -385,7 +384,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
             overflow: 'hidden',
             cursor: 'pointer',
             boxShadow: 'var(--shadow-sm)',
-            minHeight: '180px'
+            width: '100%',
+            aspectRatio: '1536/1024'
           }} onClick={() => selectCategory('studio_light')}>
             <div className="banner-hover-overlay" style={{
               position: 'absolute',
@@ -419,7 +419,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
 
           {/* Horizontal Banner 2 */}
           <div className="horizontal-banner" style={{
-            backgroundImage: 'url(/banner_horizontal_delivery.png)',
+            backgroundImage: 'url(/summer_discount_horizontal.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -429,7 +429,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
             overflow: 'hidden',
             cursor: 'pointer',
             boxShadow: 'var(--shadow-sm)',
-            minHeight: '180px'
+            width: '100%',
+            aspectRatio: '1536/1024'
           }} onClick={() => {
             alert('Dịch vụ giao nhận 2H cam kết phục vụ nội thành nhanh chóng và đúng hẹn!');
           }}>
