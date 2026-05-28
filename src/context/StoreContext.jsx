@@ -760,8 +760,16 @@ export const StoreProvider = ({ children }) => {
             }
           });
         }
+        // Also update in profiles table on database
+        await supabase.from('profiles').update({
+          phone,
+          citizen_id: citizenId,
+          studio_name: studioName || `${user.name} Studio`,
+          is_partner: false
+        }).eq('id', user.id);
+        console.log('[Supabase Profiles] Successfully updated partner status to pending in DB');
       } catch (e) {
-        console.warn('[Supabase] Failed to update user metadata, using local fallback:', e);
+        console.warn('[Supabase] Failed to update user metadata or profiles table:', e);
       }
     }
     
@@ -790,6 +798,19 @@ export const StoreProvider = ({ children }) => {
     });
     
     localStorage.setItem('gearup_users', JSON.stringify(updatedUsers));
+
+    // Real Supabase update
+    if (userId && !userId.startsWith('user-')) {
+      try {
+        await supabase.from('profiles').update({
+          is_partner: true
+        }).eq('id', userId);
+        console.log('[Supabase Profiles] Approved partner in database:', userId);
+      } catch (err) {
+        console.warn('[Supabase Profiles] Failed to approve partner in DB:', err);
+      }
+    }
+
     return { error: null };
   };
 
@@ -814,6 +835,19 @@ export const StoreProvider = ({ children }) => {
     });
     
     localStorage.setItem('gearup_users', JSON.stringify(updatedUsers));
+
+    // Real Supabase update
+    if (userId && !userId.startsWith('user-')) {
+      try {
+        await supabase.from('profiles').update({
+          is_partner: false
+        }).eq('id', userId);
+        console.log('[Supabase Profiles] Rejected partner in database:', userId);
+      } catch (err) {
+        console.warn('[Supabase Profiles] Failed to reject partner in DB:', err);
+      }
+    }
+
     return { error: null };
   };
 

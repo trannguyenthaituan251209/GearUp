@@ -41,9 +41,47 @@ export default function PlatformDashboard() {
   // Trigger state refresh for users database
   const [usersList, setUsersList] = useState([]);
   
-  const fetchUsers = () => {
+  const fetchUsers = async () => {
+    // 1. Fetch LocalStorage Mock DB
     const usersStr = localStorage.getItem('gearup_users');
-    const list = usersStr ? JSON.parse(usersStr) : [];
+    let list = usersStr ? JSON.parse(usersStr) : [];
+
+    // 2. Fetch from real database 'profiles' if configured
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const { data: dbProfiles, error: dbError } = await supabase.from('profiles').select('*');
+        if (!dbError && dbProfiles) {
+          // Map DB profiles to UI structure and merge
+          const mappedDB = dbProfiles.map(p => ({
+            id: p.id,
+            name: p.name || 'Người dùng Supabase',
+            email: p.id, // For display
+            avatar: p.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+            isPartner: p.is_partner || false,
+            partnerStatus: p.is_partner ? 'approved' : (p.phone && p.citizen_id ? 'pending' : null),
+            phone: p.phone || '',
+            citizenId: p.citizen_id || '',
+            studioName: p.studio_name || '',
+            isStaff: p.id === 'user-admin' // Fallback admin check
+          }));
+          
+          // Merge lists prioritizing local database for details, but keep real profiles
+          const merged = [...list];
+          mappedDB.forEach(dbU => {
+            const matchIndex = merged.findIndex(u => u.id === dbU.id);
+            if (matchIndex >= 0) {
+              merged[matchIndex] = { ...merged[matchIndex], ...dbU };
+            } else {
+              merged.push(dbU);
+            }
+          });
+          list = merged;
+        }
+      } catch (err) {
+        console.warn('[Platform SSO] Failed to fetch real database profiles:', err);
+      }
+    }
     setUsersList(list);
   };
 
