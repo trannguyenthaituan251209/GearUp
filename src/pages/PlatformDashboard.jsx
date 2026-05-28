@@ -105,13 +105,16 @@ export default function PlatformDashboard() {
       setErrorMsg(error.message || 'Thông tin đăng nhập không hợp lệ.');
     } else {
       // Check if logged in user is actually staff
-      const freshUser = data;
-      // In local fallback, data is returned directly. Check if it's staff
       const usersStr = localStorage.getItem('gearup_users');
       const allUsers = usersStr ? JSON.parse(usersStr) : [];
       const matched = allUsers.find(u => u.email === email.toLowerCase());
       
-      if (!matched || !matched.isStaff) {
+      const isUserStaff = email.toLowerCase().endsWith('@gearup.vn') || 
+                          data?.user?.email?.toLowerCase().endsWith('@gearup.vn') ||
+                          data?.user?.user_metadata?.isStaff ||
+                          matched?.isStaff;
+
+      if (!isUserStaff) {
         setErrorMsg('Truy cập bị từ chối! Tài khoản này không thuộc Ban nhân sự GearUp.');
         logoutUser();
       } else {

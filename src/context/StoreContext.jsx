@@ -510,7 +510,7 @@ export const StoreProvider = ({ children }) => {
           avatar: freshUser?.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
           isPartner: freshUser?.isPartner || false,
           partnerStatus: freshUser?.partnerStatus || null,
-          isStaff: freshUser?.isStaff || false,
+          isStaff: freshUser?.isStaff || metadata.isStaff || activeUser.email?.toLowerCase().endsWith('@gearup.vn') || false,
           phone: freshUser?.phone || metadata.phone || '',
           citizenId: freshUser?.citizenId || metadata.citizenId || '',
           studioName: freshUser?.studioName || metadata.studioName || ''
