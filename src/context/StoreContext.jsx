@@ -665,8 +665,7 @@ export const StoreProvider = ({ children }) => {
         }
       });
       if (error) {
-        console.warn('[Supabase Auth] Fallback to LocalStorage signup:', error.message);
-        return signUpUserLocalStorage(email, password, name, phone);
+        return { data: null, error };
       }
       
       // Immediately insert into public.profiles table to prevent any trigger delays
@@ -683,14 +682,13 @@ export const StoreProvider = ({ children }) => {
           }]);
           console.log('[Supabase Profiles] Immediately synced profile for user:', data.user.id);
         } catch (dbErr) {
-          console.warn('[Supabase Profiles] Profile immediate insert error (schema might not exist or duplicate):', dbErr);
+          console.warn('[Supabase Profiles] Profile immediate insert error:', dbErr);
         }
       }
 
       return { data, error: null };
     } catch (err) {
-      console.warn('[Supabase Auth] Fallback to LocalStorage signup due to exception:', err);
-      return signUpUserLocalStorage(email, password, name, phone);
+      return { data: null, error: err };
     }
   };
 
@@ -701,13 +699,11 @@ export const StoreProvider = ({ children }) => {
         password
       });
       if (error) {
-        console.warn('[Supabase Auth] Fallback to LocalStorage login:', error.message);
-        return loginUserLocalStorage(email, password);
+        return { data: null, error };
       }
       return { data, error: null };
     } catch (err) {
-      console.warn('[Supabase Auth] Fallback to LocalStorage login due to exception:', err);
-      return loginUserLocalStorage(email, password);
+      return { data: null, error: err };
     }
   };
 
