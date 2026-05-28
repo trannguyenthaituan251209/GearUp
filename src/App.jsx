@@ -13,8 +13,13 @@ import PlatformDashboard from './pages/PlatformDashboard';
 import AuthModal from './components/AuthModal';
 
 function MainAppContent() {
-  const isPartnerPortal = window.location.hostname.startsWith('partner.') || window.location.search.includes('portal=partner');
-  const isAdminPortal = window.location.hostname.startsWith('admin.') || window.location.search.includes('portal=admin');
+  const isPartnerPortal = 
+    window.location.hostname.startsWith('partner.') || 
+    window.location.search.includes('portal=partner');
+  const isAdminPortal = 
+    window.location.hostname.startsWith('admin.') || 
+    window.location.hostname.startsWith('sso.') || 
+    window.location.search.includes('portal=admin');
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   

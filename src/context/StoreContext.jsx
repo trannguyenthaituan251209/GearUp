@@ -521,22 +521,18 @@ export const StoreProvider = ({ children }) => {
 
         setUser(mappedUser);
       } else {
-        // Persist local mock session if active
+        // Persist local mock/real session if active
         const storageUserStr = localStorage.getItem('gearup_current_user');
         const storageUser = storageUserStr ? JSON.parse(storageUserStr) : null;
         if (storageUser) {
           // Fetch fresh user to check if they got approved in the background
           const usersStr = localStorage.getItem('gearup_users');
           const users = usersStr ? JSON.parse(usersStr) : [];
-          const freshUser = users.find(u => u.id === storageUser.id);
+          const freshUser = users.find(u => u.id === storageUser.id || u.email === storageUser.email);
           const finalUser = freshUser || storageUser;
 
-          if (finalUser.id.startsWith('user-') || finalUser.id === 'demo-user-id' || finalUser.id === 'user-admin') {
-            localStorage.setItem('gearup_current_user', JSON.stringify(finalUser));
-            setUser(finalUser);
-          } else {
-            setUser(null);
-          }
+          localStorage.setItem('gearup_current_user', JSON.stringify(finalUser));
+          setUser(finalUser);
         } else {
           setUser(null);
         }
@@ -672,6 +668,25 @@ export const StoreProvider = ({ children }) => {
         console.warn('[Supabase Auth] Fallback to LocalStorage signup:', error.message);
         return signUpUserLocalStorage(email, password, name, phone);
       }
+      
+      // Immediately insert into public.profiles table to prevent any trigger delays
+      if (data?.user) {
+        try {
+          await supabase.from('profiles').insert([{
+            id: data.user.id,
+            name,
+            phone,
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+            is_partner: false,
+            citizen_id: '',
+            studio_name: ''
+          }]);
+          console.log('[Supabase Profiles] Immediately synced profile for user:', data.user.id);
+        } catch (dbErr) {
+          console.warn('[Supabase Profiles] Profile immediate insert error (schema might not exist or duplicate):', dbErr);
+        }
+      }
+
       return { data, error: null };
     } catch (err) {
       console.warn('[Supabase Auth] Fallback to LocalStorage signup due to exception:', err);

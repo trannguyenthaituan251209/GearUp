@@ -50,6 +50,9 @@ export default function PartnerRegister({ setCurrentPage }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+
   const handleNextStep = (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -116,19 +119,115 @@ export default function PartnerRegister({ setCurrentPage }) {
     if (error) {
       setErrorMsg(error.message || 'Đăng ký đối tác thất bại. Vui lòng kiểm tra lại thông tin.');
     } else {
-      // Build Partner URL redirect
-      const { protocol, host, hostname, port, pathname } = window.location;
-      let partnerUrl = '';
-      if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-        partnerUrl = `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
-      } else {
-        partnerUrl = `${protocol}//partner.${host}${pathname}`;
-      }
+      setIsSubmitted(true);
       
-      alert('Gửi yêu cầu đăng ký Đối Tác thành công! Hồ sơ của bạn đang được tiếp nhận và chờ Ban quản trị phê duyệt.');
-      window.location.href = partnerUrl;
+      // Countdown interval to redirect back to home
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCurrentPage('home');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
   };
+
+  if (isSubmitted) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#ffffff',
+        fontFamily: 'var(--font-secondary)',
+        padding: '20px'
+      }}>
+        <div style={{
+          maxWidth: '560px',
+          width: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '40px 30px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+          border: '1.5px solid #e2e8f0',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#fff2e6',
+            color: '#ff7800',
+            marginBottom: '24px'
+          }}>
+            <ShieldCheck size={36} />
+          </div>
+
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>
+            Yêu cầu đối tác đã gửi thành công
+          </h2>
+
+          <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.6', marginBottom: '28px' }}>
+            Yêu cầu trở thành đối tác của bạn đã được gửi đi và chờ xét duyệt, vui lòng kiểm tra email định kỳ để nhận được thông báo mới nhất.
+          </p>
+
+          {/* Checkout-style receipt summary */}
+          <div style={{
+            backgroundColor: '#f8fafc',
+            borderRadius: '12px',
+            border: '1px solid #cbd5e1',
+            padding: '20px',
+            textAlign: 'left',
+            fontSize: '14px',
+            color: '#334155',
+            lineHeight: '1.8',
+            marginBottom: '32px'
+          }}>
+            <div style={{ borderBottom: '1.5px dashed #cbd5e1', paddingBottom: '12px', marginBottom: '12px', fontWeight: '800', color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Chi tiết đăng ký đối tác</span>
+              <span style={{ color: '#ff7800' }}>Đang xét duyệt</span>
+            </div>
+            <div>• Tên Cửa hàng/Studio: <strong>{studioName}</strong></div>
+            <div>• Số điện thoại: <strong>{phone}</strong></div>
+            <div>• Số CMND/CCCD: <strong>{citizenId}</strong></div>
+            <div>• Loại tài khoản: <strong>Đối tác cho thuê (Partner)</strong></div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              onClick={() => setCurrentPage('home')}
+              style={{
+                height: '48px',
+                backgroundColor: '#0066ff',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '700',
+                fontSize: '15px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                boxShadow: '0 4px 14px rgba(0, 102, 255, 0.2)'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#0052cc'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#0066ff'}
+            >
+              Về Trang Chủ Ngay
+            </button>
+            <div style={{ fontSize: '13px', color: '#64748b' }}>
+              Hệ thống tự động chuyển hướng về trang chủ sau <strong>{countdown}</strong> giây...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
