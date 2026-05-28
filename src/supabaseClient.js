@@ -13,13 +13,11 @@ const isConfigured =
 
 let supabaseInstance = null;
 
-if (isConfigured) {
-  try {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('[Supabase] Successfully initialized real Supabase client.');
-  } catch (err) {
-    console.error('[Supabase] Error initializing client, falling back to mock:', err);
-  }
+try {
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  console.log('[Supabase] Initializing real Supabase client.');
+} catch (err) {
+  console.error('[Supabase] Error initializing client:', err);
 }
 
 if (!supabaseInstance) {
