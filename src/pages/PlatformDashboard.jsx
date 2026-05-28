@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
+import { supabase } from '../supabaseClient';
 import { 
   ShieldCheck, 
   Lock, 
