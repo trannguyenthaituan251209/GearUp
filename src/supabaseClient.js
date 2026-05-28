@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve keys from environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
 // Detect if keys are valid (not empty and not default placeholders)
 const isConfigured = 
