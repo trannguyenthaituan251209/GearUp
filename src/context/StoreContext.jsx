@@ -491,12 +491,29 @@ export const StoreProvider = ({ children }) => {
 
   // Auth state change handler
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const activeUser = session?.user || (session?.email ? session : null);
       if (activeUser) {
-        // Retrieve partner status from local storage or real metadata
+        // Retrieve partner status from database if real Supabase client is configured
         const metadata = activeUser.user_metadata || {};
         
+        let dbProfile = null;
+        const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+        if (isRealSupabase && activeUser.id) {
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', activeUser.id)
+              .maybeSingle();
+            if (!error && data) {
+              dbProfile = data;
+            }
+          } catch (err) {
+            console.warn('[Supabase Profiles] Error fetching profile:', err);
+          }
+        }
+
         // Retrieve fresh partner status from gearup_users mock database
         const usersStr = localStorage.getItem('gearup_users');
         const users = usersStr ? JSON.parse(usersStr) : [];
@@ -506,14 +523,14 @@ export const StoreProvider = ({ children }) => {
           ...activeUser,
           id: activeUser.id || freshUser?.id || 'demo-user-id',
           email: activeUser.email,
-          name: freshUser?.name || metadata.name || activeUser.email.split('@')[0],
-          avatar: freshUser?.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-          isPartner: freshUser?.isPartner || false,
-          partnerStatus: freshUser?.partnerStatus || null,
+          name: dbProfile?.name || freshUser?.name || metadata.name || activeUser.email.split('@')[0],
+          avatar: dbProfile?.avatar || freshUser?.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+          isPartner: dbProfile?.is_partner !== undefined ? dbProfile.is_partner : (freshUser?.isPartner || false),
+          partnerStatus: dbProfile?.partner_status || (dbProfile?.is_partner ? 'approved' : freshUser?.partnerStatus || null),
           isStaff: freshUser?.isStaff || metadata.isStaff || activeUser.email?.toLowerCase().endsWith('@gearup.vn') || false,
-          phone: freshUser?.phone || metadata.phone || '',
-          citizenId: freshUser?.citizenId || metadata.citizenId || '',
-          studioName: freshUser?.studioName || metadata.studioName || ''
+          phone: dbProfile?.phone || freshUser?.phone || metadata.phone || '',
+          citizenId: dbProfile?.citizen_id || freshUser?.citizenId || metadata.citizenId || '',
+          studioName: dbProfile?.studio_name || freshUser?.studioName || metadata.studioName || ''
         };
 
         // Cache the verified user session details
