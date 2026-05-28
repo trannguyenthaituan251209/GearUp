@@ -491,30 +491,12 @@ export const StoreProvider = ({ children }) => {
 
   // Auth state change handler
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       try {
         const activeUser = session?.user || (session?.email ? session : null);
         if (activeUser) {
-          // Retrieve partner status from database if real Supabase client is configured
           const metadata = activeUser.user_metadata || {};
           
-          let dbProfile = null;
-          const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
-          if (isRealSupabase && activeUser.id) {
-            try {
-              const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', activeUser.id)
-                .maybeSingle();
-              if (!error && data) {
-                dbProfile = data;
-              }
-            } catch (err) {
-              console.warn('[Supabase Profiles] Error fetching profile:', err);
-            }
-          }
-
           // Retrieve fresh partner status from gearup_users mock database
           const usersStr = localStorage.getItem('gearup_users');
           const users = usersStr ? JSON.parse(usersStr) : [];
@@ -523,14 +505,14 @@ export const StoreProvider = ({ children }) => {
           const mappedUser = {
             id: activeUser.id || freshUser?.id || 'demo-user-id',
             email: activeUser.email || '',
-            name: dbProfile?.name || freshUser?.name || metadata.name || (activeUser.email ? activeUser.email.split('@')[0] : 'User'),
-            avatar: dbProfile?.avatar || freshUser?.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-            isPartner: dbProfile?.is_partner !== undefined ? dbProfile.is_partner : (freshUser?.isPartner || false),
-            partnerStatus: dbProfile?.partner_status || (dbProfile?.is_partner ? 'approved' : freshUser?.partnerStatus || null),
+            name: freshUser?.name || metadata.name || (activeUser.email ? activeUser.email.split('@')[0] : 'User'),
+            avatar: freshUser?.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+            isPartner: freshUser?.isPartner || false,
+            partnerStatus: freshUser?.partnerStatus || null,
             isStaff: freshUser?.isStaff || metadata.isStaff || activeUser.email?.toLowerCase().endsWith('@gearup.vn') || false,
-            phone: dbProfile?.phone || freshUser?.phone || metadata.phone || '',
-            citizenId: dbProfile?.citizen_id || freshUser?.citizenId || metadata.citizenId || '',
-            studioName: dbProfile?.studio_name || freshUser?.studioName || metadata.studioName || ''
+            phone: freshUser?.phone || metadata.phone || '',
+            citizenId: freshUser?.citizenId || metadata.citizenId || '',
+            studioName: freshUser?.studioName || metadata.studioName || ''
           };
 
           // Cache the verified user session details
@@ -550,6 +532,45 @@ export const StoreProvider = ({ children }) => {
       subscription?.unsubscribe();
     };
   }, []);
+
+  // Fetch real profile details asynchronously when a real user logs in
+  useEffect(() => {
+    const fetchRealProfile = async () => {
+      if (user && user.id && !user.id.startsWith('user-')) {
+        const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+        if (isRealSupabase) {
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .maybeSingle();
+            
+            if (!error && data) {
+              setUser(prev => {
+                if (!prev || prev.id !== user.id) return prev;
+                const merged = {
+                  ...prev,
+                  name: data.name || prev.name,
+                  avatar: data.avatar || prev.avatar,
+                  isPartner: data.is_partner !== undefined ? data.is_partner : prev.isPartner,
+                  partnerStatus: data.partner_status || (data.is_partner ? 'approved' : prev.partnerStatus),
+                  phone: data.phone || prev.phone,
+                  citizenId: data.citizen_id || prev.citizenId,
+                  studioName: data.studio_name || prev.studioName
+                };
+                localStorage.setItem('gearup_current_user', JSON.stringify(merged));
+                return merged;
+              });
+            }
+          } catch (err) {
+            console.warn('[Supabase Profiles] Error fetching real profile:', err);
+          }
+        }
+      }
+    };
+    fetchRealProfile();
+  }, [user?.id]);
 
   // Fetch / Seed tables on user mount
   useEffect(() => {
