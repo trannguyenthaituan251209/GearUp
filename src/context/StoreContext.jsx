@@ -520,7 +520,6 @@ export const StoreProvider = ({ children }) => {
         const freshUser = users.find(u => u.id === activeUser.id || u.email === activeUser.email);
 
         const mappedUser = {
-          ...activeUser,
           id: activeUser.id || freshUser?.id || 'demo-user-id',
           email: activeUser.email,
           name: dbProfile?.name || freshUser?.name || metadata.name || activeUser.email.split('@')[0],
@@ -676,32 +675,53 @@ export const StoreProvider = ({ children }) => {
   };
 
   const registerPartner = async (phone, citizenId, studioName) => {
-    if (!user) return { error: new Error('Vui lòng đăng nhập trước!') };
-    
-    const updatedUser = {
-      ...user,
-      isPartner: false, // Wait for platform approval
-      partnerStatus: 'pending',
-      phone,
-      citizenId,
-      studioName: studioName || `${user.name} Studio`
-    };
+    try {
+      if (!user) return { error: new Error('Vui lòng đăng nhập trước!') };
+      
+      const updatedUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        isPartner: false, // Wait for platform approval
+        partnerStatus: 'pending',
+        isStaff: user.isStaff,
+        phone,
+        citizenId,
+        studioName: studioName || `${user.name} Studio`
+      };
 
-    // Update in stored users database
-    const usersData = localStorage.getItem('gearup_users');
-    const users = usersData ? JSON.parse(usersData) : [];
-    const updatedUsers = users.map((u) => u.id === user.id ? updatedUser : u);
-    if (!users.some((u) => u.id === user.id)) {
-      updatedUsers.push(updatedUser);
-    }
-    localStorage.setItem('gearup_users', JSON.stringify(updatedUsers));
-    
-    // Update active session
-    localStorage.setItem('gearup_current_user', JSON.stringify(updatedUser));
-    
-    // If it's a real Supabase client (not mock user), update user metadata
-    if (user.id && !user.id.startsWith('user-')) {
-      try {
+      // Update in stored users database
+      const usersData = localStorage.getItem('gearup_users');
+      const users = usersData ? JSON.parse(usersData) : [];
+      
+      // Clean up users array to avoid saving circular/large objects
+      const cleanUsers = users.map((u) => {
+        return {
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          avatar: u.avatar,
+          isPartner: u.isPartner,
+          partnerStatus: u.partnerStatus,
+          isStaff: u.isStaff,
+          phone: u.phone,
+          citizenId: u.citizenId,
+          studioName: u.studioName
+        };
+      });
+
+      const updatedUsers = cleanUsers.map((u) => u.id === user.id ? updatedUser : u);
+      if (!cleanUsers.some((u) => u.id === user.id)) {
+        updatedUsers.push(updatedUser);
+      }
+      localStorage.setItem('gearup_users', JSON.stringify(updatedUsers));
+      
+      // Update active session
+      localStorage.setItem('gearup_current_user', JSON.stringify(updatedUser));
+      
+      // If it's a real Supabase client (not mock user), update user metadata
+      if (user.id && !user.id.startsWith('user-')) {
         if (supabase.auth.updateUser) {
           await supabase.auth.updateUser({
             data: {
@@ -721,13 +741,14 @@ export const StoreProvider = ({ children }) => {
           is_partner: false
         }).eq('id', user.id);
         console.log('[Supabase Profiles] Successfully updated partner status to pending in DB');
-      } catch (e) {
-        console.warn('[Supabase] Failed to update user metadata or profiles table:', e);
       }
+      
+      setUser(updatedUser);
+      return { data: updatedUser, error: null };
+    } catch (e) {
+      console.error('[registerPartner] Error occurred:', e);
+      return { data: null, error: e };
     }
-    
-    setUser(updatedUser);
-    return { data: updatedUser, error: null };
   };
 
   const approvePartner = async (userId) => {
