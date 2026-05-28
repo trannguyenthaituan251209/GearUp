@@ -521,21 +521,8 @@ export const StoreProvider = ({ children }) => {
 
         setUser(mappedUser);
       } else {
-        // Persist local mock/real session if active
-        const storageUserStr = localStorage.getItem('gearup_current_user');
-        const storageUser = storageUserStr ? JSON.parse(storageUserStr) : null;
-        if (storageUser) {
-          // Fetch fresh user to check if they got approved in the background
-          const usersStr = localStorage.getItem('gearup_users');
-          const users = usersStr ? JSON.parse(usersStr) : [];
-          const freshUser = users.find(u => u.id === storageUser.id || u.email === storageUser.email);
-          const finalUser = freshUser || storageUser;
-
-          localStorage.setItem('gearup_current_user', JSON.stringify(finalUser));
-          setUser(finalUser);
-        } else {
-          setUser(null);
-        }
+        localStorage.removeItem('gearup_current_user');
+        setUser(null);
       }
     });
 
@@ -601,54 +588,7 @@ export const StoreProvider = ({ children }) => {
     fetchDB();
   }, [user]);
 
-  // Auth LocalStorage Fallback Helpers
-  const signUpUserLocalStorage = (email, password, name, phone = '') => {
-    const usersStr = localStorage.getItem('gearup_users');
-    const users = usersStr ? JSON.parse(usersStr) : [];
-    
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { data: null, error: new Error('Email này đã được đăng ký trên hệ thống!') };
-    }
-    
-    const mockUserId = `user-${Date.now()}`;
-    const newMockUser = {
-      id: mockUserId,
-      email,
-      password,
-      name,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-      isPartner: false,
-      phone,
-      citizenId: '',
-      studioName: ''
-    };
-    
-    users.push(newMockUser);
-    localStorage.setItem('gearup_users', JSON.stringify(users));
-    localStorage.setItem('gearup_current_user', JSON.stringify(newMockUser));
-    setUser(newMockUser);
-    return { data: newMockUser, error: null };
-  };
 
-  const loginUserLocalStorage = (email, password) => {
-    const usersStr = localStorage.getItem('gearup_users');
-    const users = usersStr ? JSON.parse(usersStr) : [];
-    
-    const foundUser = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    
-    if (foundUser) {
-      localStorage.setItem('gearup_current_user', JSON.stringify(foundUser));
-      setUser(foundUser);
-      return { data: foundUser, error: null };
-    }
-    
-    return { 
-      data: null, 
-      error: new Error('Tài khoản hoặc mật khẩu không chính xác hoặc kết nối API Supabase bị lỗi (Rate Limit).') 
-    };
-  };
 
   // Auth Functions
   const signUpUser = async (email, password, name, phone = '') => {
