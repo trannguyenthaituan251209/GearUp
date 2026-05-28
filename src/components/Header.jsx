@@ -12,6 +12,9 @@ export default function Header({ currentPage, setCurrentPage }) {
 
   const getPartnerUrl = () => {
     const { protocol, host, hostname, port, pathname } = window.location;
+    if (hostname.includes('hatvaqua.online')) {
+      return `${protocol}//partner.hatvaqua.online${pathname}`;
+    }
     if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
       return `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
     }

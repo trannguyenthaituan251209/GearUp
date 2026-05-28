@@ -454,7 +454,9 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               } else {
                 const { protocol, host, hostname, port, pathname } = window.location;
                 let partnerUrl = '';
-                if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+                if (hostname.includes('hatvaqua.online')) {
+                  partnerUrl = `${protocol}//partner.hatvaqua.online${pathname}`;
+                } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
                   partnerUrl = `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
                 } else if (hostname.startsWith('partner.')) {
                   partnerUrl = window.location.href;
