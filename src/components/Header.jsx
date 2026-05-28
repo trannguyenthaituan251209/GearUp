@@ -1,9 +1,27 @@
 import React, { useContext } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import { User, Briefcase, Plus } from 'lucide-react';
+import { User, Briefcase, LogOut, Shield } from 'lucide-react';
 
 export default function Header({ currentPage, setCurrentPage }) {
-  const { currentUserRole, toggleUserRole } = useContext(StoreContext);
+  const { 
+    user, 
+    setShowAuthModal, 
+    setShowPartnerModal, 
+    logoutUser 
+  } = useContext(StoreContext);
+
+  const getPartnerUrl = () => {
+    const { protocol, host, hostname, port, pathname } = window.location;
+    if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+      return `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
+    }
+    if (hostname.startsWith('partner.')) {
+      return window.location.href;
+    }
+    return `${protocol}//partner.${host}${pathname}`;
+  };
+
+
 
   return (
     <header className="app-header">
@@ -22,59 +40,96 @@ export default function Header({ currentPage, setCurrentPage }) {
           </a>
           <a
             href="#"
-            className={`nav-link ${currentPage === 'market' ? 'active' : ''}`}
-            onClick={(e) => { e.preventDefault(); setCurrentPage('market'); }}
+            className="nav-link"
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentPage('home');
+              setTimeout(() => {
+                const element = document.getElementById('market-section');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 100);
+            }}
           >
             Chợ Tài Sản
           </a>
-          {currentUserRole === 'renter' ? (
+          
+          {user && (
             <a
               href="#"
-              className={`nav-link ${currentPage === 'renter-dashboard' ? 'active' : ''}`}
-              onClick={(e) => { e.preventDefault(); setCurrentPage('renter-dashboard'); }}
+              className={`nav-link ${currentPage === 'customer-dashboard' ? 'active' : ''}`}
+              onClick={(e) => { e.preventDefault(); setCurrentPage('customer-dashboard'); }}
             >
               Lịch Sử Thuê
             </a>
-          ) : (
+          )}
+
+          {(!user || !user.isPartner) && (
             <a
               href="#"
-              className={`nav-link ${currentPage === 'lessor-dashboard' ? 'active' : ''}`}
-              onClick={(e) => { e.preventDefault(); setCurrentPage('lessor-dashboard'); }}
+              className="nav-link"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!user) {
+                  alert('Vui lòng đăng nhập tài khoản khách hàng trước khi đăng ký trở thành đối tác!');
+                  setShowAuthModal(true);
+                } else {
+                  setCurrentPage('partner-register');
+                }
+              }}
             >
-              Quản Lý Cho Thuê
+              Trở Thành Đối Tác
             </a>
           )}
         </nav>
 
         <div className="header-actions">
-          <div 
-            className={`role-badge ${currentUserRole}`}
-            onClick={toggleUserRole}
-            title="Click để chuyển vai trò trải nghiệm thử"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            {currentUserRole === 'renter' ? (
-              <>
-                <User size={14} />
-                <span>Người Đi Thuê</span>
-              </>
-            ) : (
-              <>
-                <Briefcase size={14} />
-                <span>Chủ Tài Sản</span>
-              </>
-            )}
-          </div>
-          
-          {currentUserRole === 'lessor' && (
-            <button 
-              className="btn btn-lessor btn-sm"
-              onClick={() => setCurrentPage('lessor-dashboard')}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <Plus size={14} />
-              <span>Đăng Tin Mới</span>
-            </button>
+          {/* If NOT logged in */}
+          {!user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                className="btn btn-ghost btn-sm" 
+                onClick={() => setShowAuthModal(true)}
+                style={{ fontWeight: '700', color: 'var(--color-text-main)' }}
+              >
+                Đăng Nhập
+              </button>
+              <button 
+                className="btn btn-primary btn-sm" 
+                onClick={() => setCurrentPage('register')}
+                style={{ fontWeight: '700' }}
+              >
+                Đăng Ký
+              </button>
+            </div>
+          ) : (
+            /* If logged in */
+            <>
+              {/* Partner View Toggler / Register Partner Button */}
+
+
+              {/* User profile avatar, name and logout */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px', borderLeft: '1px solid var(--color-border)' }}>
+                <img 
+                  src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'} 
+                  alt={user.name} 
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-dark)' }} className="user-name-display">
+                  {user.name.split(' ').pop()}
+                </span>
+                
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  onClick={logoutUser}
+                  style={{ padding: '6px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Đăng xuất"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

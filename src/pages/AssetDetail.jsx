@@ -4,18 +4,37 @@ import { formatPrice } from '../components/AssetCard';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
-  const { assets, addBooking, addMessage, currentUserRole, messages } = useContext(StoreContext);
+  const { assets, addBooking, addMessage, messages, user } = useContext(StoreContext);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
+
+  const goBackToMarket = () => {
+    setCurrentPage('home');
+    setTimeout(() => {
+      const element = document.getElementById('market-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
   
   // Booking state
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [renterName, setRenterName] = useState('Lê Minh Tuấn'); // default test user
-  const [renterContact, setRenterContact] = useState('0987654321');
+  const [renterName, setRenterName] = useState(''); // no default mock text
+  const [renterContact, setRenterContact] = useState('');
   const [rentalDays, setRentalDays] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setRenterName(user.name);
+      if (user.phone) {
+        setRenterContact(user.phone);
+      }
+    }
+  }, [user]);
 
   // Find asset
   const asset = assets.find((a) => a.id === assetId);
@@ -25,7 +44,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
     return (
       <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
         <h2>Không tìm thấy sản phẩm</h2>
-        <button className="btn btn-primary" style={{ marginTop: '20px' }} onClick={() => setCurrentPage('market')}>
+        <button className="btn btn-primary" style={{ marginTop: '20px' }} onClick={goBackToMarket}>
           Quay lại Chợ tài sản
         </button>
       </div>
@@ -84,7 +103,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
     setBookingSuccess(true);
     setTimeout(() => {
       setBookingSuccess(false);
-      setCurrentPage('renter-dashboard');
+      setCurrentPage('customer-dashboard');
     }, 2000);
   };
 
@@ -92,7 +111,8 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
-    addMessage(asset.id, asset.title, currentUserRole === 'renter' ? renterName : asset.ownerName, chatMessage);
+    const senderName = (user && user.id === asset.ownerId) ? asset.ownerName : renterName;
+    addMessage(asset.id, asset.title, senderName, chatMessage);
     setChatMessage('');
     alert('Đã gửi tin nhắn đến chủ tài sản thành công!');
     setShowChatModal(false);
@@ -106,7 +126,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       
       {/* Back Button */}
       <button 
-        onClick={() => setCurrentPage('market')} 
+        onClick={goBackToMarket} 
         style={{ 
           display: 'inline-flex', 
           alignItems: 'center', 

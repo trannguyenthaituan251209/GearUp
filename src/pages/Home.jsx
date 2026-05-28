@@ -1,6 +1,6 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import AssetCard from '../components/AssetCard';
+import AssetCard, { formatPrice } from '../components/AssetCard';
 import { 
   Camera, 
   Aperture, 
@@ -14,37 +14,158 @@ import {
   Zap, 
   Users, 
   User, 
-  Briefcase 
+  Briefcase,
+  Search
 } from 'lucide-react';
 
-export default function Home({ setCurrentPage, setSelectedAssetId, setFilters }) {
-  const { assets, currentUserRole, toggleUserRole } = useContext(StoreContext);
+const CATEGORIES = [
+  { value: 'canon_cam', label: 'Máy ảnh Canon' },
+  { value: 'sony_cam', label: 'Máy ảnh Sony' },
+  { value: 'fuji_cam', label: 'Máy ảnh Fujifilm' },
+  { value: 'nikon_cam', label: 'Máy ảnh Nikon' },
+  { value: 'olympus_cam', label: 'Máy ảnh Olympus' },
+  { value: 'canon_lens', label: 'Ống kính Canon' },
+  { value: 'sony_lens', label: 'Ống kính Sony' },
+  { value: 'fuji_lens', label: 'Ống kính Fujifilm' },
+  { value: 'sigma_lens', label: 'Ống kính Sigma' },
+  { value: 'tamron_lens', label: 'Ống kính Tamron' },
+  { value: 'flycam', label: 'Flycam & Drone' },
+  { value: 'gimbal', label: 'Gimbal & Chống rung' },
+  { value: 'studio_light', label: 'Ánh sáng & Studio' },
+  { value: 'audio', label: 'Thiết bị âm thanh' }
+];
+
+const SkeletonCard = () => (
+  <div className="skeleton-card">
+    <div className="skeleton-image skeleton-pulse" />
+    <div className="skeleton-content">
+      <div className="skeleton-meta">
+        <div className="skeleton-line skeleton-line-sm skeleton-pulse" />
+        <div className="skeleton-line skeleton-line-sm skeleton-pulse" style={{ width: '20%' }} />
+      </div>
+      <div className="skeleton-title-1 skeleton-pulse" />
+      <div className="skeleton-title-2 skeleton-pulse" />
+      <div className="skeleton-line skeleton-line-md skeleton-pulse" style={{ marginBottom: '12px' }} />
+      <div className="skeleton-footer">
+        <div className="skeleton-price skeleton-pulse" />
+        <div className="skeleton-button skeleton-pulse" />
+      </div>
+    </div>
+  </div>
+);
+
+export default function Home({ setCurrentPage, setSelectedAssetId, filters, setFilters }) {
+  const { assets, user, setShowAuthModal, setShowPartnerModal } = useContext(StoreContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
+
+  // Local pagination/lazy state
+  const [visibleCount, setVisibleCount] = useState(8);
+  const [isLazyLoading, setIsLazyLoading] = useState(false);
+  const sentinelRef = useRef(null);
+
+  // Sync search fields with shared filters
+  useEffect(() => {
+    setSearchQuery(filters.search || '');
+    setCategoryQuery(filters.category || '');
+  }, [filters.search, filters.category]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(8);
+    setIsLazyLoading(false);
+  }, [filters.search, filters.category, filters.location, filters.priceRange]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setFilters({
+      ...filters,
       search: searchQuery,
-      category: categoryQuery,
-      location: '',
-      priceRange: 1000000
+      category: categoryQuery
     });
-    setCurrentPage('market');
+    setTimeout(() => {
+      const element = document.getElementById('market-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   const selectCategory = (cat) => {
     setFilters({
+      ...filters,
       search: '',
-      category: cat,
+      category: cat
+    });
+    setTimeout(() => {
+      const element = document.getElementById('market-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  // Filter logic
+  const filteredAssets = assets.filter((asset) => {
+    const matchesSearch = !filters.search || 
+      asset.title.toLowerCase().includes(filters.search.toLowerCase()) || 
+      asset.description.toLowerCase().includes(filters.search.toLowerCase());
+    
+    const matchesCategory = !filters.category || asset.category === filters.category;
+    
+    const matchesLocation = !filters.location || asset.location === filters.location;
+    
+    const matchesPrice = !filters.priceRange || asset.pricePerDay <= filters.priceRange;
+
+    return matchesSearch && matchesCategory && matchesLocation && matchesPrice;
+  });
+
+  const visibleAssets = filteredAssets.slice(0, visibleCount);
+
+  // Scroll handler for Lazy Loading
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const first = entries[0];
+      if (first.isIntersecting && !isLazyLoading && visibleCount < filteredAssets.length) {
+        setIsLazyLoading(true);
+        setTimeout(() => {
+          setVisibleCount((prev) => Math.min(prev + 8, filteredAssets.length));
+          setIsLazyLoading(false);
+        }, 600); // 600ms premium feeling delay
+      }
+    }, {
+      rootMargin: '100px'
+    });
+
+    const currentSentinel = sentinelRef.current;
+    if (currentSentinel) {
+      observer.observe(currentSentinel);
+    }
+
+    return () => {
+      if (currentSentinel) {
+        observer.unobserve(currentSentinel);
+      }
+    };
+  }, [isLazyLoading, visibleCount, filteredAssets.length]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters({
+      ...filters,
+      [key]: value
+    });
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
       location: '',
       priceRange: 1000000
     });
-    setCurrentPage('market');
   };
-
-  // Get top 4 featured assets (newest or highest rated)
-  const featuredAssets = assets.slice(0, 4);
 
   return (
     <div className="home-page">
@@ -323,11 +444,25 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
               overflow: 'hidden',
               cursor: 'pointer',
               boxShadow: 'var(--shadow-sm)'
-            }} onClick={() => {
-              if (currentUserRole === 'renter') {
-                toggleUserRole();
+            }} onClick={(e) => {
+              e.preventDefault();
+              if (!user) {
+                alert('Vui lòng đăng nhập tài khoản trước khi đăng ký trở thành đối tác!');
+                setShowAuthModal(true);
+              } else if (!user.isPartner) {
+                setShowPartnerModal(true);
+              } else {
+                const { protocol, host, hostname, port, pathname } = window.location;
+                let partnerUrl = '';
+                if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+                  partnerUrl = `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
+                } else if (hostname.startsWith('partner.')) {
+                  partnerUrl = window.location.href;
+                } else {
+                  partnerUrl = `${protocol}//partner.${host}${pathname}`;
+                }
+                window.location.href = partnerUrl;
               }
-              setCurrentPage('lessor-dashboard');
             }}>
               <div className="banner-hover-overlay" style={{
                 position: 'absolute',
@@ -580,42 +715,164 @@ export default function Home({ setCurrentPage, setSelectedAssetId, setFilters })
         }
       `}</style>
 
-      {/* Featured Assets */}
-      <section className="container" style={{ marginBottom: '60px' }}>
+      {/* Marketplace Section */}
+      <section className="container" id="market-section" style={{ paddingTop: '40px', marginBottom: '60px' }}>
+        <div style={{ marginBottom: '30px' }}>
+          <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>Chợ Thiết Bị</h2>
+          <p style={{ color: 'var(--color-text-muted)' }}>Khám phá đầy đủ thiết bị quay chụp chất lượng cao, tối ưu chi phí tối đa cho bạn.</p>
+        </div>
+
         <div style={{
-          display: 'flex',
-          justifyContent: 'between',
-          alignItems: 'center',
-          marginBottom: '30px'
-        }}>
-          <h2>Tài Sản Cho Thuê Nổi Bật</h2>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setFilters({ search: '', category: '', location: '', priceRange: 1000000 });
-              setCurrentPage('market');
-            }}
-            style={{ marginLeft: 'auto' }}
-          >
-            Xem tất cả
-          </button>
+          display: 'grid',
+          gridTemplateColumns: '280px 1fr',
+          gap: '30px',
+          alignItems: 'start'
+        }} className="market-layout">
+          
+          {/* Sidebar Filters */}
+          <aside className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', position: 'sticky', top: '100px', zIndex: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Bộ Lọc Tìm Kiếm</h3>
+              <button 
+                onClick={resetFilters} 
+                style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '13px', cursor: 'pointer', fontWeight: '700' }}
+              >
+                Đặt lại
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="form-group">
+              <label>Tìm kiếm</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Tên thiết bị, mô tả..." 
+                value={filters.search || ''}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+              />
+            </div>
+
+            {/* Category */}
+            <div className="form-group">
+              <label>Danh mục</label>
+              <select 
+                className="form-control" 
+                value={filters.category || ''} 
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+              >
+                <option value="">Tất cả danh mục</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Location */}
+            <div className="form-group">
+              <label>Khu vực</label>
+              <select 
+                className="form-control" 
+                value={filters.location || ''} 
+                onChange={(e) => handleFilterChange('location', e.target.value)}
+              >
+                <option value="">Tất cả khu vực</option>
+                <option value="Hà Nội">Hà Nội</option>
+                <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                <option value="Đà Nẵng">Đà Nẵng</option>
+                <option value="Cần Thơ">Cần Thơ</option>
+              </select>
+            </div>
+
+            {/* Price Range Slider */}
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label>Giá tối đa / ngày</label>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-primary)' }}>
+                  {formatPrice(filters.priceRange || 1000000)} đ
+                </span>
+              </div>
+              <input 
+                type="range" 
+                min="50000" 
+                max="1000000" 
+                step="10000"
+                value={filters.priceRange || 1000000} 
+                onChange={(e) => handleFilterChange('priceRange', parseInt(e.target.value) || 1000000)}
+                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--color-primary)', marginTop: '8px' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                <span>50K đ</span>
+                <span>1.000K đ</span>
+              </div>
+            </div>
+          </aside>
+
+          {/* Assets Main Panel */}
+          <main>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontWeight: '600' }}>
+                Tìm thấy <strong style={{ color: 'var(--color-dark)' }}>{filteredAssets.length}</strong> gợi ý phù hợp
+              </div>
+            </div>
+
+            {visibleAssets.length > 0 ? (
+              <>
+                <div className="asset-grid">
+                  {visibleAssets.map((asset) => (
+                    <AssetCard 
+                      key={asset.id} 
+                      asset={asset} 
+                      onSelect={() => {
+                        setSelectedAssetId(asset.id);
+                        setCurrentPage('asset-detail');
+                      }} 
+                    />
+                  ))}
+                  
+                  {isLazyLoading && Array.from({ length: 4 }).map((_, idx) => (
+                    <SkeletonCard key={`skeleton-${idx}`} />
+                  ))}
+                </div>
+
+                {visibleCount < filteredAssets.length && !isLazyLoading && (
+                  <div ref={sentinelRef} style={{ height: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>Đang cuộn để tải thêm thiết bị...</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              !isLazyLoading && (
+                <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Search size={48} style={{ color: 'var(--color-text-muted)', marginBottom: '15px' }} />
+                  <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Không tìm thấy thiết bị nào</h3>
+                  <p style={{ color: 'var(--color-text-muted)', maxWidth: '400px', margin: '0 auto 20px', fontSize: '14px' }}>
+                    Vui lòng điều chỉnh hoặc đặt lại bộ lọc để tìm thấy các ưu đãi cho thuê hấp dẫn khác.
+                  </p>
+                  <button className="btn btn-primary" onClick={resetFilters}>Đặt Lại Bộ Lọc</button>
+                </div>
+              )
+            )}
+          </main>
         </div>
-        <div className="asset-grid">
-          {featuredAssets.map((asset) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              onSelect={() => {
-                setSelectedAssetId(asset.id);
-                setCurrentPage('asset-detail');
-              }}
-            />
-          ))}
-        </div>
+        
+        {/* Dynamic responsive CSS overrides for the split layout grid */}
+        <style>{`
+          @media (max-width: 900px) {
+            .market-layout {
+              grid-template-columns: 1fr !important;
+            }
+            aside {
+              position: relative !important;
+              top: 0 !important;
+              margin-bottom: 20px;
+            }
+          }
+        `}</style>
       </section>
 
       {/* How it works */}
-      <section style={{ backgroundColor: '#f1f5f9', padding: '60px 0', borderRadius: 'var(--radius-xl)' }}>
+      <section style={{ backgroundColor: '#f1f5f9', padding: '60px 0', borderRadius: 'var(--radius-xl)', marginBottom: '60px' }}>
         <div className="container">
           <h2 style={{ textAlign: 'center', marginBottom: '15px' }}>Cách Thức Hoạt Động</h2>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 45px' }}>

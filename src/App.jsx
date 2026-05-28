@@ -3,12 +3,18 @@ import { StoreProvider } from './context/StoreContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
-import Market from './pages/Market';
 import AssetDetail from './pages/AssetDetail';
-import RenterDashboard from './pages/RenterDashboard';
-import LessorDashboard from './pages/LessorDashboard';
+import CustomerDashboard from './pages/CustomerDashboard';
+import PartnerDashboard from './pages/PartnerDashboard';
+import Register from './pages/Register';
+import PartnerRegister from './pages/PartnerRegister';
+import PartnerPortal from './pages/PartnerPortal';
+import PlatformDashboard from './pages/PlatformDashboard';
+import AuthModal from './components/AuthModal';
 
 function MainAppContent() {
+  const isPartnerPortal = window.location.hostname.startsWith('partner.') || window.location.search.includes('portal=partner');
+  const isAdminPortal = window.location.hostname.startsWith('admin.') || window.location.search.includes('portal=admin');
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   
@@ -27,15 +33,7 @@ function MainAppContent() {
           <Home 
             setCurrentPage={setCurrentPage} 
             setSelectedAssetId={setSelectedAssetId} 
-            setFilters={setFilters} 
-          />
-        );
-      case 'market':
-        return (
-          <Market 
-            setCurrentPage={setCurrentPage} 
-            setSelectedAssetId={setSelectedAssetId} 
-            filters={filters} 
+            filters={filters}
             setFilters={setFilters} 
           />
         );
@@ -46,20 +44,33 @@ function MainAppContent() {
             setCurrentPage={setCurrentPage} 
           />
         );
-      case 'renter-dashboard':
-        return <RenterDashboard />;
-      case 'lessor-dashboard':
-        return <LessorDashboard />;
+      case 'customer-dashboard':
+        return <CustomerDashboard />;
+      case 'partner-dashboard':
+        return <PartnerDashboard />;
+      case 'register':
+        return <Register setCurrentPage={setCurrentPage} />;
+      case 'partner-register':
+        return <PartnerRegister setCurrentPage={setCurrentPage} />;
       default:
         return (
           <Home 
             setCurrentPage={setCurrentPage} 
             setSelectedAssetId={setSelectedAssetId} 
+            filters={filters}
             setFilters={setFilters} 
           />
         );
     }
   };
+
+  if (isAdminPortal) {
+    return <PlatformDashboard />;
+  }
+
+  if (isPartnerPortal) {
+    return <PartnerPortal />;
+  }
 
   return (
     <>
@@ -68,6 +79,9 @@ function MainAppContent() {
         {renderPage()}
       </main>
       <Footer setCurrentPage={setCurrentPage} />
+
+      {/* Global Modals */}
+      <AuthModal setCurrentPage={setCurrentPage} />
     </>
   );
 }

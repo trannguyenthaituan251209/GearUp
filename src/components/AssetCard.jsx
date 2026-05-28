@@ -2,6 +2,7 @@ import React from 'react';
 
 // Format price in VND (e.g. 450000 -> 450.000)
 export function formatPrice(price) {
+  if (price === undefined || price === null) return '0';
   return price.toLocaleString('vi-VN');
 }
 
@@ -29,9 +30,6 @@ export default function AssetCard({ asset, onSelect }) {
     <div className="asset-card" onClick={onSelect}>
       <div className="card-img-container">
         <img src={imageUrl} alt={title} className="card-img" />
-        <span className={`badge card-badge badge-${status}`}>
-          {status === 'available' ? '● Sẵn sàng' : '● Đã thuê'}
-        </span>
       </div>
       
       <div className="card-content">
@@ -57,9 +55,6 @@ export default function AssetCard({ asset, onSelect }) {
           <div className="card-price">
             {formatPrice(pricePerDay)} <span>đ/ngày</span>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-            Chi tiết
-          </button>
         </div>
       </div>
     </div>
