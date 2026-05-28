@@ -239,7 +239,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
           </div>
 
           {/* Booking form */}
-          <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', border: '1px solid rgba(79, 70, 229, 0.15)', boxShadow: 'var(--shadow-lg)' }}>
+          <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
               <span style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Giá thuê thiết bị</span>
               <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-primary)' }}>

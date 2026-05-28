@@ -8,21 +8,21 @@
   --font-secondary: 'Inter', sans-serif;
 
   /* Color Palette */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-active: #3730a3;
-  --color-primary-light: #eef2ff;
+  --color-primary: #0066ff;          /* Ocean Blue */
+  --color-primary-hover: #0052cc;
+  --color-primary-active: #003d99;
+  --color-primary-light: #e6f0ff;    /* Soft blue tint */
   
-  --color-secondary: #10b981;
-  --color-secondary-hover: #059669;
-  --color-secondary-active: #047857;
-  --color-secondary-light: #ecfdf5;
+  --color-secondary: #ff7800;        /* Vibrant Orange */
+  --color-secondary-hover: #e66c00;
+  --color-secondary-active: #cc6000;
+  --color-secondary-light: #fff2e6;  /* Soft orange tint */
 
   /* Neutral Dark / Text Colors */
   --color-dark: #0f172a;
   --color-text-main: #334155;
   --color-text-muted: #64748b;
-  --color-light: #f8fafc;
+  --color-light: #ffffff;            /* White Background */
   --color-white: #ffffff;
   --color-border: #e2e8f0;
   
@@ -55,8 +55,8 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-primary-glow: 0 4px 14px 0 rgba(79, 70, 229, 0.25);
-  --shadow-secondary-glow: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
+  --shadow-primary-glow: 0 4px 14px 0 rgba(0, 102, 255, 0.25);
+  --shadow-secondary-glow: 0 4px 14px 0 rgba(255, 120, 0, 0.25);
 
   /* Transitions */
   --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -208,7 +208,7 @@ a:hover {
 .btn-lessor:hover {
   background-color: var(--color-secondary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 20px rgba(255, 120, 0, 0.35);
 }
 
 .btn-lessor:active {

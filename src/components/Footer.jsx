@@ -6,7 +6,9 @@ export default function Footer({ setCurrentPage }) {
       <div className="container">
         <div className="footer-grid">
           <div className="footer-about">
-            <h3>GearUp</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <img src="/main_logo.png" alt="GearUp Logo" style={{ height: '32px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+            </h3>
             <p style={{ marginTop: '10px', fontSize: '14px', lineHeight: '1.6', maxWidth: '380px' }}>
               Nền tảng trung gian uy tín hàng đầu Việt Nam giúp kết nối người có tài sản nhàn rỗi cho thuê và người có nhu cầu thuê thiết bị, phương tiện chất lượng cao một cách nhanh chóng, an toàn và chuyên nghiệp.
             </p>

@@ -8,9 +8,8 @@ export default function Header({ currentPage, setCurrentPage }) {
   return (
     <header className="app-header">
       <div className="container header-container">
-        <a href="#" className="logo-link" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }}>
-          GearUp
-          <span className="logo-dot"></span>
+        <a href="#" className="logo-link" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src="/main_logo.png" alt="GearUp Logo" style={{ height: '36px', objectFit: 'contain' }} />
         </a>
 
         <nav className="app-nav">

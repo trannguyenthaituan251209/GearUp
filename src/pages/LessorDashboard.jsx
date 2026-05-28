@@ -115,7 +115,7 @@ export default function LessorDashboard() {
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
             Yêu Cầu Đang Chờ Duyệt
           </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: '#d97706' }}>
+          <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-warning)' }}>
             {pendingRequests}
           </div>
         </div>
