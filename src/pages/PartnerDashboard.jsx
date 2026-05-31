@@ -596,14 +596,20 @@ export default function PartnerDashboard() {
                 <div className="form-group">
                   <label>Phân loại danh mục</label>
                   <select className="form-control" value={category} onChange={(e) => setCategory(e.target.value)}>
-                    <option value="sony_cam">Máy ảnh Sony</option>
                     <option value="canon_cam">Máy ảnh Canon</option>
+                    <option value="sony_cam">Máy ảnh Sony</option>
                     <option value="fuji_cam">Máy ảnh Fujifilm</option>
-                    <option value="sony_lens">Ống kính Sony</option>
+                    <option value="nikon_cam">Máy ảnh Nikon</option>
+                    <option value="olympus_cam">Máy ảnh Olympus</option>
                     <option value="canon_lens">Ống kính Canon</option>
+                    <option value="sony_lens">Ống kính Sony</option>
+                    <option value="fuji_lens">Ống kính Fujifilm</option>
+                    <option value="sigma_lens">Ống kính Sigma</option>
+                    <option value="tamron_lens">Ống kính Tamron</option>
                     <option value="flycam">Flycam & Drone</option>
-                    <option value="gimbal">Gimbal chống rung</option>
-                    <option value="studio_light">Đèn Studio</option>
+                    <option value="gimbal">Gimbal & Chống rung</option>
+                    <option value="studio_light">Ánh sáng & Studio</option>
+                    <option value="audio">Thiết bị âm thanh</option>
                   </select>
                 </div>
                 

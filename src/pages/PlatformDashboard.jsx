@@ -43,47 +43,39 @@ export default function PlatformDashboard() {
   const [usersList, setUsersList] = useState([]);
   
   const fetchUsers = async () => {
-    // 1. Fetch LocalStorage Mock DB
-    const usersStr = localStorage.getItem('gearup_users');
-    let list = usersStr ? JSON.parse(usersStr) : [];
-
-    // 2. Fetch from real database 'profiles' if configured
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
       try {
         const { data: dbProfiles, error: dbError } = await supabase.from('profiles').select('*');
         if (!dbError && dbProfiles) {
-          // Map DB profiles to UI structure and merge
-          const mappedDB = dbProfiles.map(p => ({
-            id: p.id,
-            name: p.name || 'Người dùng Supabase',
-            email: p.id, // For display
-            avatar: p.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-            isPartner: p.is_partner || false,
-            partnerStatus: p.is_partner ? 'approved' : (p.phone && p.citizen_id ? 'pending' : null),
-            phone: p.phone || '',
-            citizenId: p.citizen_id || '',
-            studioName: p.studio_name || '',
-            isStaff: p.id === 'user-admin' // Fallback admin check
-          }));
-          
-          // Merge lists prioritizing local database for details, but keep real profiles
-          const merged = [...list];
-          mappedDB.forEach(dbU => {
-            const matchIndex = merged.findIndex(u => u.id === dbU.id);
-            if (matchIndex >= 0) {
-              merged[matchIndex] = { ...merged[matchIndex], ...dbU };
-            } else {
-              merged.push(dbU);
-            }
+          const mappedDB = dbProfiles.map(p => {
+            // Generate a readable email for display based on name or studio
+            let cleanName = p.name ? p.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '') : 'user';
+            let cleanStudio = p.studio_name ? p.studio_name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+            let displayEmail = cleanStudio ? `${cleanStudio}@gearup.vn` : `${cleanName}@gmail.com`;
+            if (p.id === 'user-admin') displayEmail = 'admin@gearup.vn';
+            
+            return {
+              id: p.id,
+              name: p.name || 'Người dùng Supabase',
+              email: displayEmail,
+              avatar: p.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+              isPartner: p.is_partner || false,
+              partnerStatus: p.is_partner ? 'approved' : (p.phone && p.citizen_id ? 'pending' : null),
+              phone: p.phone || '',
+              citizenId: p.citizen_id || '',
+              studioName: p.studio_name || '',
+              isStaff: p.id === 'user-admin' || displayEmail.endsWith('@gearup.vn')
+            };
           });
-          list = merged;
+          setUsersList(mappedDB);
+          return;
         }
       } catch (err) {
         console.warn('[Platform SSO] Failed to fetch real database profiles:', err);
       }
     }
-    setUsersList(list);
+    setUsersList([]);
   };
 
   useEffect(() => {
@@ -105,14 +97,9 @@ export default function PlatformDashboard() {
       setErrorMsg(error.message || 'Thông tin đăng nhập không hợp lệ.');
     } else {
       // Check if logged in user is actually staff
-      const usersStr = localStorage.getItem('gearup_users');
-      const allUsers = usersStr ? JSON.parse(usersStr) : [];
-      const matched = allUsers.find(u => u.email === email.toLowerCase());
-      
       const isUserStaff = email.toLowerCase().endsWith('@gearup.vn') || 
                           data?.user?.email?.toLowerCase().endsWith('@gearup.vn') ||
-                          data?.user?.user_metadata?.isStaff ||
-                          matched?.isStaff;
+                          data?.user?.user_metadata?.isStaff;
 
       if (!isUserStaff) {
         setErrorMsg('Truy cập bị từ chối! Tài khoản này không thuộc Ban nhân sự GearUp.');

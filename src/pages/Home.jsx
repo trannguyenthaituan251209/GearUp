@@ -186,7 +186,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             padding: '12px 0',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'var(--shadow-sm)',
             overflow: 'hidden'
           }}>
             <div style={{
@@ -198,21 +197,21 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
-              🎥 Thiết bị cho thuê
+              Thiết bị cho thuê
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', margin: 0, padding: 0 }}>
               {[
-                { key: 'canon_cam', label: 'Máy ảnh Canon', icon: Camera },
-                { key: 'sony_cam', label: 'Máy ảnh Sony', icon: Camera },
-                { key: 'fuji_cam', label: 'Máy ảnh Fujifilm', icon: Camera },
-                { key: 'nikon_cam', label: 'Máy ảnh Nikon', icon: Camera },
-                { key: 'canon_lens', label: 'Ống kính Canon', icon: Aperture },
-                { key: 'sony_lens', label: 'Ống kính Sony', icon: Aperture },
-                { key: 'fuji_lens', label: 'Ống kính Fujifilm', icon: Aperture },
-                { key: 'flycam', label: 'Flycam & Drone', icon: Video },
-                { key: 'gimbal', label: 'Gimbal & Chống rung', icon: Sliders },
-                { key: 'studio_light', label: 'Ánh sáng & Studio', icon: Lightbulb },
-                { key: 'audio', label: 'Thiết bị âm thanh', icon: Mic }
+                { key: 'canon_cam', label: 'Máy ảnh Canon' },
+                { key: 'sony_cam', label: 'Máy ảnh Sony' },
+                { key: 'fuji_cam', label: 'Máy ảnh Fujifilm' },
+                { key: 'nikon_cam', label: 'Máy ảnh Nikon' },
+                { key: 'canon_lens', label: 'Ống kính Canon' },
+                { key: 'sony_lens', label: 'Ống kính Sony' },
+                { key: 'fuji_lens', label: 'Ống kính Fujifilm' },
+                { key: 'flycam', label: 'Flycam & Drone' },
+                { key: 'gimbal', label: 'Gimbal & Chống rung' },
+                { key: 'studio_light', label: 'Ánh sáng & Studio' },
+                { key: 'audio', label: 'Thiết bị âm thanh' }
               ].map((item) => (
                 <li key={item.key}>
                   <a
@@ -221,7 +220,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
                       padding: '10px 20px',
                       color: 'var(--color-text-main)',
                       fontSize: '14px',
@@ -230,7 +228,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                     }}
                     className="category-side-item"
                   >
-                    <item.icon size={15} style={{ opacity: 0.8 }} />
                     {item.label}
                   </a>
                 </li>
@@ -268,10 +265,9 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
-                backgroundColor: 'var(--color-primary-light)',
-                color: 'var(--color-primary)',
-                padding: '4px 10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                padding: '4px 12px',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '11px',
                 fontWeight: '700',
@@ -279,7 +275,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 marginBottom: '16px',
                 textTransform: 'uppercase'
               }}>
-                <Sparkles size={11} />
                 Dịch vụ cho thuê camera hàng đầu
               </span>
               
@@ -292,12 +287,16 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 fontFamily: 'var(--font-primary)',
                 lineHeight: '1.25'
               }}>
-                Thuê Thiết Bị Quay Chụp.<br />Chuyên Nghiệp & Tiện Lợi.
+                <span style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #ff7800 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>Thuê Thiết Bị Quay Chụp.</span><br />Chuyên Nghiệp & Tiện Lợi.
               </h1>
               
               <p style={{
                 fontSize: '15px',
-                color: '#c7d2fe',
+                color: '#e2e8f0',
                 marginBottom: '28px',
                 fontWeight: '400',
                 lineHeight: '1.5',
@@ -309,16 +308,16 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               {/* Hero Search Bar */}
               <form 
                 onSubmit={handleSearchSubmit} 
-                className="glass-panel" 
                 style={{
                   maxWidth: '750px',
-                  padding: '12px',
+                  padding: '8px',
                   display: 'flex',
                   flexWrap: 'wrap',
                   gap: '8px',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: 'var(--radius-md)'
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'none'
                 }}
               >
                 <input 
@@ -388,7 +387,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             <div className="vertical-banner dark-theme-banner" style={{
               width: '100%',
               aspectRatio: '1024/1536',
-              backgroundImage: 'url(/welcome_new_member_vertical.png)',
+              backgroundImage: 'url(https://imgh.in/host/114eaa)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -397,7 +396,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               position: 'relative',
               overflow: 'hidden',
               cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)'
+              boxShadow: 'none'
             }} onClick={() => selectCategory('sony_cam')}>
               <div className="banner-hover-overlay" style={{
                 position: 'absolute',
@@ -405,8 +404,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 left: 0,
                 width: '100%',
                 height: '100%',
-                backgroundColor: 'rgba(15, 23, 42, 0.1)',
-                transition: 'var(--transition-normal)',
+                backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                transition: 'var(--transition-fast)',
                 display: 'flex',
                 alignItems: 'flex-end',
                 padding: '16px'
@@ -414,18 +413,15 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
                   fontSize: '12px',
                   fontWeight: '700',
                   color: '#ffffff',
                   backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: 'var(--radius-sm)',
-                  boxShadow: 'var(--shadow-md)',
                   backdropFilter: 'blur(4px)'
                 }}>
                   <span>Thuê ngay</span>
-                  <span className="arrow-transition">→</span>
                 </div>
               </div>
             </div>
@@ -434,7 +430,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             <div className="vertical-banner light-theme-banner" style={{
               width: '100%',
               aspectRatio: '1024/1536',
-              backgroundImage: 'url(/new_member_discount_vertical.png)',
+              backgroundImage: 'url(https://imgh.in/host/9g2aar)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -443,7 +439,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               position: 'relative',
               overflow: 'hidden',
               cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)'
+              boxShadow: 'none'
             }} onClick={(e) => {
               e.preventDefault();
               if (!user) {
@@ -472,8 +468,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 left: 0,
                 width: '100%',
                 height: '100%',
-                backgroundColor: 'rgba(255, 120, 0, 0.05)',
-                transition: 'var(--transition-normal)',
+                backgroundColor: 'rgba(255, 120, 0, 0.02)',
+                transition: 'var(--transition-fast)',
                 display: 'flex',
                 alignItems: 'flex-end',
                 padding: '16px'
@@ -481,18 +477,15 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
                   fontSize: '12px',
                   fontWeight: '700',
                   color: '#ffffff',
                   backgroundColor: 'rgba(255, 120, 0, 0.9)',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: 'var(--radius-sm)',
-                  boxShadow: 'var(--shadow-md)',
                   backdropFilter: 'blur(4px)'
                 }}>
                   <span>Đăng ký ngay</span>
-                  <span className="arrow-transition">→</span>
                 </div>
               </div>
             </div>
@@ -511,7 +504,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           
           {/* Horizontal Banner 1 */}
           <div className="horizontal-banner" style={{
-            backgroundImage: 'url(/become_our_partner_horizontal.png)',
+            backgroundImage: 'url(https://imgh.in/host/jhz60b)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -520,7 +513,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'none',
             width: '100%',
             aspectRatio: '1536/1024'
           }} onClick={() => selectCategory('studio_light')}>
@@ -530,8 +523,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               left: 0,
               width: '100%',
               height: '100%',
-              backgroundColor: 'rgba(79, 70, 229, 0.05)',
-              transition: 'var(--transition-normal)',
+              backgroundColor: 'rgba(79, 70, 229, 0.02)',
+              transition: 'var(--transition-fast)',
               display: 'flex',
               alignItems: 'flex-end',
               padding: '20px'
@@ -539,24 +532,21 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
                 fontSize: '13px',
                 fontWeight: '700',
                 color: '#ffffff',
                 backgroundColor: 'var(--color-primary)',
                 padding: '8px 16px',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow-md)'
+                borderRadius: 'var(--radius-sm)'
               }}>
                 <span>Khám phá combo</span>
-                <span>→</span>
               </div>
             </div>
           </div>
 
           {/* Horizontal Banner 2 */}
           <div className="horizontal-banner" style={{
-            backgroundImage: 'url(/summer_discount_horizontal.png)',
+            backgroundImage: 'url(https://imgh.in/host/fj41ta)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -565,7 +555,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'none',
             width: '100%',
             aspectRatio: '1536/1024'
           }} onClick={() => {
@@ -577,8 +567,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               left: 0,
               width: '100%',
               height: '100%',
-              backgroundColor: 'rgba(217, 119, 6, 0.05)',
-              transition: 'var(--transition-normal)',
+              backgroundColor: 'rgba(217, 119, 6, 0.02)',
+              transition: 'var(--transition-fast)',
               display: 'flex',
               alignItems: 'flex-end',
               padding: '20px'
@@ -586,17 +576,14 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
                 fontSize: '13px',
                 fontWeight: '700',
                 color: '#ffffff',
                 backgroundColor: 'var(--color-secondary)',
                 padding: '8px 16px',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow-md)'
+                borderRadius: 'var(--radius-sm)'
               }}>
                 <span>Xem chi tiết</span>
-                <span>→</span>
               </div>
             </div>
           </div>
@@ -611,75 +598,56 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '20px'
         }}>
-          <div className="glass-panel" style={{ padding: '20px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Coins size={32} style={{ color: 'var(--color-primary)' }} />
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--color-dark)' }}>Giá Thuê Cực Tốt</h4>
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Tiết kiệm đến 80% so với mua thiết bị</p>
-            </div>
+          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Giá Thuê Cực Tốt</h4>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Tiết kiệm đến 80% so với mua thiết bị mới.</p>
           </div>
           
-          <div className="glass-panel" style={{ padding: '20px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <ShieldCheck size={32} style={{ color: 'var(--color-primary)' }} />
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--color-dark)' }}>Bảo Hiểm Thiết Bị</h4>
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Yên tâm sử dụng tác nghiệp, quay phim</p>
-            </div>
+          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Bảo Hiểm Thiết Bị</h4>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Yên tâm sử dụng tác nghiệp, quay phim chụp ảnh.</p>
           </div>
 
-          <div className="glass-panel" style={{ padding: '20px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Zap size={32} style={{ color: 'var(--color-primary)' }} />
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--color-dark)' }}>Duyệt Thuê Nhanh</h4>
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Thủ tục xác minh online tiện lợi</p>
-            </div>
+          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Duyệt Thuê Nhanh</h4>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Thủ tục xác minh trực tuyến tiện lợi, an toàn.</p>
           </div>
 
-          <div className="glass-panel" style={{ padding: '20px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Users size={32} style={{ color: 'var(--color-primary)' }} />
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--color-dark)' }}>Kết Nối Creator</h4>
-              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>Cộng đồng sáng tạo ảnh/phim uy tín</p>
-            </div>
+          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Kết Nối Creator</h4>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Cộng đồng sáng tạo ảnh và phim chuyên nghiệp.</p>
           </div>
         </div>
       </section>
 
       {/* CSS selector classes for side menu and grid layout overrides */}
       <style>{`
+        .category-side-item {
+          transition: var(--transition-fast);
+        }
         .category-side-item:hover {
           background-color: var(--color-primary-light) !important;
           color: var(--color-primary) !important;
-          padding-left: 24px !important;
         }
         
         .vertical-banner {
-          transition: var(--transition-normal);
+          transition: var(--transition-fast);
         }
         .vertical-banner:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-lg) !important;
+          opacity: 0.85;
         }
         .vertical-banner:hover .banner-hover-overlay {
-          background-color: rgba(15, 23, 42, 0.35) !important;
-        }
-        .vertical-banner:hover .arrow-transition {
-          transform: translateX(4px);
-        }
-        .arrow-transition {
-          display: inline-block;
-          transition: transform 0.2s ease;
+          background-color: rgba(15, 23, 42, 0.2) !important;
         }
 
         .horizontal-banner {
-          transition: var(--transition-normal);
+          transition: var(--transition-fast);
         }
         .horizontal-banner:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-lg) !important;
+          opacity: 0.85;
         }
         .horizontal-banner:hover .banner-hover-overlay {
-          background-color: rgba(15, 23, 42, 0.2) !important;
+          background-color: rgba(15, 23, 42, 0.1) !important;
         }
 
         @media (max-width: 1100px) {
@@ -720,7 +688,14 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
       {/* Marketplace Section */}
       <section className="container" id="market-section" style={{ paddingTop: '40px', marginBottom: '60px' }}>
         <div style={{ marginBottom: '30px' }}>
-          <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>Chợ Thiết Bị</h2>
+          <h2 style={{
+            fontSize: '28px',
+            marginBottom: '8px',
+            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            display: 'inline-block'
+          }}>Chợ Thiết Bị</h2>
           <p style={{ color: 'var(--color-text-muted)' }}>Khám phá đầy đủ thiết bị quay chụp chất lượng cao, tối ưu chi phí tối đa cho bạn.</p>
         </div>
 
@@ -732,7 +707,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
         }} className="market-layout">
           
           {/* Sidebar Filters */}
-          <aside className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', position: 'sticky', top: '100px', zIndex: 10 }}>
+          <aside className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Bộ Lọc Tìm Kiếm</h3>
               <button 
@@ -874,7 +849,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
       </section>
 
       {/* How it works */}
-      <section style={{ backgroundColor: '#f1f5f9', padding: '60px 0', borderRadius: 'var(--radius-xl)', marginBottom: '60px' }}>
+      <section style={{ backgroundColor: '#f8fafc', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: '60px 0', marginBottom: '60px' }}>
         <div className="container">
           <h2 style={{ textAlign: 'center', marginBottom: '15px' }}>Cách Thức Hoạt Động</h2>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 45px' }}>
@@ -883,41 +858,37 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
 
           <div className="grid-2" style={{ gap: '30px' }}>
             {/* Renter flow */}
-            <div className="glass-panel" style={{ padding: '30px', backgroundColor: '#ffffff' }}>
-              <h3 style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <User size={18} />
+            <div className="glass-panel" style={{ padding: '30px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+              <h3 style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px', fontSize: '18px' }}>
                 Dành Cho Người Đi Thuê
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)',
-                    color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>1</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-primary)', flexShrink: 0, width: '32px'
+                  }}>01.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Tìm kiếm & Đặt lịch</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Tìm kiếm & Đặt lịch</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Tìm thiết bị mong muốn, chọn số ngày cần thuê và gửi yêu cầu.</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)',
-                    color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>2</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-primary)', flexShrink: 0, width: '32px'
+                  }}>02.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Chờ duyệt & Nhận tài sản</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Chờ duyệt & Nhận tài sản</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Chủ tài sản xác nhận nhanh chóng. Bạn đến nhận hoặc giao nhận tận nơi.</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)',
-                    color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>3</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-primary)', flexShrink: 0, width: '32px'
+                  }}>03.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Sử dụng & Hoàn trả</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Sử dụng & Hoàn trả</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Sử dụng có trách nhiệm và hoàn trả đúng hẹn. Đánh giá chất lượng dịch vụ.</p>
                   </div>
                 </div>
@@ -925,41 +896,37 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             </div>
 
             {/* Lessor flow */}
-            <div className="glass-panel" style={{ padding: '30px', backgroundColor: '#ffffff' }}>
-              <h3 style={{ color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <Briefcase size={18} />
+            <div className="glass-panel" style={{ padding: '30px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
+              <h3 style={{ color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px', fontSize: '18px' }}>
                 Dành Cho Chủ Tài Sản
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-secondary-light)',
-                    color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>1</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-secondary)', flexShrink: 0, width: '32px'
+                  }}>01.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Đăng tải tài sản miễn phí</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Đăng tải tài sản miễn phí</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Đăng ảnh, ghi chi tiết thông tin, thiết lập giá thuê/ngày linh hoạt.</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-secondary-light)',
-                    color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>2</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-secondary)', flexShrink: 0, width: '32px'
+                  }}>02.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Quản lý & Duyệt yêu cầu</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Quản lý & Duyệt yêu cầu</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Xem thông tin người thuê, phê duyệt hoặc từ chối yêu cầu thuê ngay tại Dashboard.</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-secondary-light)',
-                    color: 'var(--color-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', flexShrink: 0
-                  }}>3</div>
+                    fontSize: '20px', fontWeight: '800', color: 'var(--color-secondary)', flexShrink: 0, width: '32px'
+                  }}>03.</div>
                   <div>
-                    <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>Nhận thanh toán an toàn</h4>
+                    <h4 style={{ fontSize: '15px', marginBottom: '4px', fontWeight: '700' }}>Nhận thanh toán an toàn</h4>
                     <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Kiếm thêm thu nhập thụ động an toàn từ tài sản ít sử dụng của mình.</p>
                   </div>
                 </div>
