@@ -201,17 +201,17 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', margin: 0, padding: 0 }}>
               {[
-                { key: 'canon_cam', label: 'Máy ảnh Canon' },
-                { key: 'sony_cam', label: 'Máy ảnh Sony' },
-                { key: 'fuji_cam', label: 'Máy ảnh Fujifilm' },
-                { key: 'nikon_cam', label: 'Máy ảnh Nikon' },
-                { key: 'canon_lens', label: 'Ống kính Canon' },
-                { key: 'sony_lens', label: 'Ống kính Sony' },
-                { key: 'fuji_lens', label: 'Ống kính Fujifilm' },
-                { key: 'flycam', label: 'Flycam & Drone' },
-                { key: 'gimbal', label: 'Gimbal & Chống rung' },
-                { key: 'studio_light', label: 'Ánh sáng & Studio' },
-                { key: 'audio', label: 'Thiết bị âm thanh' }
+                { key: 'canon_cam', label: 'Máy ảnh Canon', icon: <Camera size={18} strokeWidth={2} /> },
+                { key: 'sony_cam', label: 'Máy ảnh Sony', icon: <Camera size={18} strokeWidth={2} /> },
+                { key: 'fuji_cam', label: 'Máy ảnh Fujifilm', icon: <Camera size={18} strokeWidth={2} /> },
+                { key: 'nikon_cam', label: 'Máy ảnh Nikon', icon: <Camera size={18} strokeWidth={2} /> },
+                { key: 'canon_lens', label: 'Ống kính Canon', icon: <Aperture size={18} strokeWidth={2} /> },
+                { key: 'sony_lens', label: 'Ống kính Sony', icon: <Aperture size={18} strokeWidth={2} /> },
+                { key: 'fuji_lens', label: 'Ống kính Fujifilm', icon: <Aperture size={18} strokeWidth={2} /> },
+                { key: 'flycam', label: 'Flycam & Drone', icon: <Video size={18} strokeWidth={2} /> },
+                { key: 'gimbal', label: 'Gimbal & Chống rung', icon: <Sliders size={18} strokeWidth={2} /> },
+                { key: 'studio_light', label: 'Ánh sáng & Studio', icon: <Lightbulb size={18} strokeWidth={2} /> },
+                { key: 'audio', label: 'Thiết bị âm thanh', icon: <Mic size={18} strokeWidth={2} /> }
               ].map((item) => (
                 <li key={item.key}>
                   <a
@@ -220,6 +220,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      gap: '12px',
                       padding: '10px 20px',
                       color: 'var(--color-text-main)',
                       fontSize: '14px',
@@ -228,6 +229,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                     }}
                     className="category-side-item"
                   >
+                    <span style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}>{item.icon}</span>
                     {item.label}
                   </a>
                 </li>

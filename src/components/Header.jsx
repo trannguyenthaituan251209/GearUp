@@ -30,7 +30,7 @@ export default function Header({ currentPage, setCurrentPage }) {
     <header className="app-header">
       <div className="container header-container">
         <a href="#" className="logo-link" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="/main_logo.png" alt="GearUp Logo" style={{ height: '36px', objectFit: 'contain' }} />
+          <img src="/main_logo.png" alt="GearUp Logo" style={{ height: '180px', objectFit: 'contain' }} />
         </a>
 
         <nav className="app-nav">
