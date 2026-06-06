@@ -15,7 +15,14 @@ import {
   Users, 
   User, 
   Briefcase,
-  Search
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Award,
+  Truck,
+  ShoppingCart,
+  Wifi
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -58,6 +65,68 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
   const { assets, user, setShowAuthModal, setShowPartnerModal } = useContext(StoreContext);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
+
+  // Hero Slider State
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const heroSlides = [
+    {
+      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200',
+      tag: 'HOT DEAL',
+      title: 'Sony Alpha A7 IV',
+      desc: 'Giảm 20% khi thuê từ 3 ngày. Trải nghiệm Full-frame đỉnh cao ngay hôm nay!',
+      action: 'Thuê Ngay'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1574169208507-84376144848b?auto=format&fit=crop&q=80&w=1200',
+      tag: 'MỚI VỀ',
+      title: 'Bộ Lens G-Master',
+      desc: 'Kho lens đa dạng, độ phân giải cực cao cho mọi nhu cầu quay chụp.',
+      action: 'Khám Phá'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1506947411487-a56738267384?auto=format&fit=crop&q=80&w=1200',
+      tag: 'XU HƯỚNG',
+      title: 'Dji Mavic 3 Pro',
+      desc: 'Ghi lại những thước phim không gian hùng vĩ với DJI Mavic 3 Pro.',
+      action: 'Xem Chi Tiết'
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
+
+  // Campaign Countdown State
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const targetDate = new Date('2026-06-30T23:59:59').getTime();
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const difference = targetDate - now;
+
+      if (difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds });
+    };
+
+    updateTimer();
+    const countdownInterval = setInterval(updateTimer, 1000);
+    return () => clearInterval(countdownInterval);
+  }, []);
 
   // Local pagination/lazy state
   const [visibleCount, setVisibleCount] = useState(8);
@@ -169,6 +238,77 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
 
   return (
     <div className="home-page">
+      <style>{`
+        .june-promo-banner {
+          background-image: url(https://imgh.in/host/a5cx74);
+          background-size: 100% 100%;
+          background-position: top center;
+          background-repeat: no-repeat;
+          border-radius: var(--radius-lg);
+          padding: 240px 24px 48px 24px;
+          border: 1px solid var(--color-border);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          overflow: hidden;
+        }
+        .june-promo-shape {
+          position: absolute;
+          z-index: 1;
+          transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .june-promo-banner:hover .shape-1 { transform: translate(15px, -15px) rotate(15deg) scale(1.1); }
+        .june-promo-banner:hover .shape-2 { transform: translate(-15px, 20px) rotate(-15deg) scale(1.1); }
+        .june-promo-banner:hover .shape-3 { transform: translate(20px, 15px) rotate(20deg) scale(1.1); }
+        .june-promo-banner:hover .shape-4 { transform: translate(-20px, -20px) rotate(-20deg) scale(1.1); }
+        .june-promo-banner:hover .shape-5 { transform: translate(10px, 20px) scale(1.2); }
+        .june-promo-banner:hover .shape-6 { transform: translate(-10px, -15px) scale(1.2); }
+        .june-promo-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 8px;
+          width: 100%;
+          max-width: 820px;
+          margin: 0 auto;
+          position: relative;
+          z-index: 1;
+        }
+        @media (max-width: 1100px) {
+          .june-promo-banner {
+            padding-top: 200px;
+          }
+          .june-promo-grid {
+            max-width: 680px;
+          }
+        }
+        @media (max-width: 768px) {
+          .june-promo-banner {
+            padding-top: 160px;
+            background-size: 100% 100%;
+          }
+          .june-promo-grid {
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 440px;
+          }
+        }
+        @media (max-width: 480px) {
+          .june-promo-banner {
+            padding-top: 140px;
+            background-image: url(https://imgh.in/host/5qlau9);
+            background-size: 100% 100%;
+          }
+          .june-promo-grid {
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 380px;
+          }
+        }
+        @media (max-width: 1150px) {
+          .june-promo-sticker-left, .june-promo-sticker-right {
+            display: none !important;
+          }
+        }
+      `}</style>
       {/* Top Banner & Category Sidebar (Phong Vu Demo Style) */}
       <section className="container" style={{ paddingTop: '30px', marginBottom: '40px' }}>
         <div style={{
@@ -237,144 +377,123 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             </ul>
           </aside>
 
-          {/* Middle Column - Hero Banner */}
-          <div className="hero-section" style={{
-            backgroundImage: 'url(/hero_section.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            color: '#ffffff',
-            borderRadius: 'var(--radius-lg)',
+          {/* Middle Column - Hero Banner Slider */}
+          <div 
+            className="hero-section" 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
             position: 'relative',
+            borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
             minHeight: '480px',
-            padding: '40px'
+            backgroundColor: '#000',
+            boxShadow: 'var(--shadow-md)'
           }}>
-            {/* Solid Dark Overlay for Text Legibility (No Gradient) */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(15, 23, 42, 0.65)',
-              zIndex: 1
-            }}></div>
-
-            <div style={{ position: 'relative', zIndex: 2, textAlign: 'left', width: '100%' }}>
-              <span style={{
-                display: 'inline-flex',
+            {heroSlides.map((slide, index) => (
+              <div key={index} style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundImage: `url(${slide.image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: currentSlide === index ? 1 : 0,
+                transition: 'opacity 0.6s ease-in-out',
+                display: 'flex',
                 alignItems: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#ffffff',
-                padding: '4px 12px',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '11px',
-                fontWeight: '700',
-                letterSpacing: '1px',
-                marginBottom: '16px',
-                textTransform: 'uppercase'
+                padding: '40px'
               }}>
-                Dịch vụ cho thuê camera hàng đầu
-              </span>
-              
-              <h1 style={{
-                color: '#ffffff',
-                fontSize: '38px',
-                fontWeight: '800',
-                letterSpacing: '-0.5px',
-                marginBottom: '14px',
-                fontFamily: 'var(--font-primary)',
-                lineHeight: '1.25'
-              }}>
-                <span style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #ff7800 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>Thuê Thiết Bị Quay Chụp.</span><br />Chuyên Nghiệp & Tiện Lợi.
-              </h1>
-              
-              <p style={{
-                fontSize: '15px',
-                color: '#e2e8f0',
-                marginBottom: '28px',
-                fontWeight: '400',
-                lineHeight: '1.5',
-                maxWidth: '600px'
-              }}>
-                Tiết kiệm tối đa chi phí sản xuất bằng cách thuê máy ảnh, ống kính, flycam, thiết bị studio... hoặc gia tăng thu nhập từ bộ thiết bị quay chụp nhàn rỗi của bạn.
-              </p>
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)',
+                  zIndex: 1
+                }}></div>
+                
+                <div style={{ position: 'relative', zIndex: 2, maxWidth: '500px', color: '#fff' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    backgroundColor: 'var(--color-primary)',
+                    color: '#fff',
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    marginBottom: '16px'
+                  }}>
+                    {slide.tag}
+                  </span>
+                  <h2 style={{
+                    fontSize: '42px',
+                    fontWeight: '800',
+                    lineHeight: '1.2',
+                    marginBottom: '16px',
+                    color: '#fff'
+                  }}>
+                    {slide.title}
+                  </h2>
+                  <p style={{
+                    fontSize: '16px',
+                    lineHeight: '1.5',
+                    color: '#e2e8f0',
+                    marginBottom: '32px'
+                  }}>
+                    {slide.desc}
+                  </p>
+                  <button className="btn btn-primary btn-lg" style={{ borderRadius: '8px', fontWeight: '700' }}>
+                    {slide.action}
+                  </button>
+                </div>
+              </div>
+            ))}
 
-              {/* Hero Search Bar */}
-              <form 
-                onSubmit={handleSearchSubmit} 
-                style={{
-                  maxWidth: '750px',
-                  padding: '8px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'none'
-                }}
-              >
-                <input 
-                  type="text" 
-                  placeholder="Tìm máy ảnh, ống kính, gimbal..."
-                  className="form-control"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    flex: '2 1 200px',
-                    border: 'none',
-                    height: '44px',
-                    fontSize: '14px',
-                    borderRadius: 'var(--radius-sm)',
-                    paddingLeft: '12px'
-                  }}
-                />
-                <select
-                  className="form-control"
-                  value={categoryQuery}
-                  onChange={(e) => setCategoryQuery(e.target.value)}
-                  style={{
-                    flex: '1 1 140px',
-                    border: 'none',
-                    height: '44px',
-                    fontSize: '14px',
-                    borderRadius: 'var(--radius-sm)'
-                  }}
-                >
-                  <option value="">Tất cả danh mục</option>
-                  <option value="canon_cam">Máy ảnh Canon</option>
-                  <option value="sony_cam">Máy ảnh Sony</option>
-                  <option value="fuji_cam">Máy ảnh Fujifilm</option>
-                  <option value="nikon_cam">Máy ảnh Nikon</option>
-                  <option value="canon_lens">Ống kính Canon</option>
-                  <option value="sony_lens">Ống kính Sony</option>
-                  <option value="fuji_lens">Ống kính Fujifilm</option>
-                  <option value="flycam">Flycam & Drone</option>
-                  <option value="gimbal">Gimbal & Chống rung</option>
-                  <option value="studio_light">Ánh sáng & Studio</option>
-                  <option value="audio">Thiết bị âm thanh</option>
-                </select>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary" 
-                  style={{
-                    flex: '1 1 100px',
-                    height: '44px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontWeight: '700'
-                  }}
-                >
-                  Tìm Kiếm
-                </button>
-              </form>
+            {/* Slider Controls */}
+            <button 
+              onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+              style={{
+                position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', color: '#fff',
+                border: 'none', width: '40px', height: '40px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3,
+                opacity: isHovered ? 1 : 0, transition: 'opacity 0.3s ease'
+              }}
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button 
+              onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
+              style={{
+                position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
+                background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', color: '#fff',
+                border: 'none', width: '40px', height: '40px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3,
+                opacity: isHovered ? 1 : 0, transition: 'opacity 0.3s ease'
+              }}
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            {/* Slider Dots */}
+            <div style={{
+              position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', gap: '8px', zIndex: 3
+            }}>
+              {heroSlides.map((_, idx) => (
+                <div key={idx} onClick={() => setCurrentSlide(idx)} style={{
+                  width: currentSlide === idx ? '24px' : '8px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  backgroundColor: currentSlide === idx ? 'var(--color-primary)' : 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }} />
+              ))}
             </div>
           </div>
 
@@ -388,8 +507,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             {/* Vertical Banner 1 */}
             <div className="vertical-banner dark-theme-banner" style={{
               width: '100%',
-              aspectRatio: '1024/1536',
-              backgroundImage: 'url(https://imgh.in/host/114eaa)',
+              flex: 1,
+              backgroundImage: 'url(https://imgh.in/host/w78kem)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -431,8 +550,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             {/* Vertical Banner 2 */}
             <div className="vertical-banner light-theme-banner" style={{
               width: '100%',
-              aspectRatio: '1024/1536',
-              backgroundImage: 'url(https://imgh.in/host/9g2aar)',
+              flex: 1,
+              backgroundImage: 'url(https://imgh.in/host/n1mgnu)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -493,134 +612,342 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             </div>
           </div>
           
+
+
         </div>
       </section>
 
-      {/* 2 Horizontal Banners below the poster and above the 4 commitment cards */}
-      <section className="container" style={{ marginBottom: '40px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '24px'
-        }} className="home-horizontal-banners">
-          
-          {/* Horizontal Banner 1 */}
-          <div className="horizontal-banner" style={{
-            backgroundImage: 'url(https://imgh.in/host/jhz60b)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border)',
-            position: 'relative',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            boxShadow: 'none',
-            width: '100%',
-            aspectRatio: '1536/1024'
-          }} onClick={() => selectCategory('studio_light')}>
-            <div className="banner-hover-overlay" style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(79, 70, 229, 0.02)',
-              transition: 'var(--transition-fast)',
-              display: 'flex',
-              alignItems: 'flex-end',
-              padding: '20px'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '13px',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: 'var(--color-primary)',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-sm)'
-              }}>
-                <span>Khám phá combo</span>
-              </div>
-            </div>
+      {/* Promo Section (Ưu Đãi) */}
+      <section className="container" style={{ marginBottom: '60px', position: 'relative', marginTop: '60px' }}>
+        <div className="june-promo-banner">
+          {/* Neobrutalist Geometric Shapes Background */}
+          {/* Top Left Star */}
+          <div className="june-promo-shape shape-1" style={{ top: '220px', left: 'max(10px, calc(50% - 460px))' }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#facc15" stroke="#000000" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
           </div>
-
-          {/* Horizontal Banner 2 */}
-          <div className="horizontal-banner" style={{
-            backgroundImage: 'url(https://imgh.in/host/fj41ta)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border)',
-            position: 'relative',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            boxShadow: 'none',
-            width: '100%',
-            aspectRatio: '1536/1024'
-          }} onClick={() => {
-            alert('Dịch vụ giao nhận 2H cam kết phục vụ nội thành nhanh chóng và đúng hẹn!');
+          {/* Top Right Plus */}
+          <div className="june-promo-shape shape-2" style={{ top: '250px', right: 'max(10px, calc(50% - 480px))' }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="#22c55e" stroke="#000000" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </div>
+          {/* Bottom Left Triangle */}
+          <div className="june-promo-shape shape-3" style={{ top: '650px', left: 'max(20px, calc(50% - 480px))' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#3b82f6" stroke="#000000" strokeWidth="2">
+              <polygon points="12 2 22 20 2 20" />
+            </svg>
+          </div>
+          {/* Bottom Right Circle */}
+          <div className="june-promo-shape shape-4" style={{ top: '620px', right: 'max(30px, calc(50% - 440px))' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="#ec4899" stroke="#000000" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+          </div>
+          {/* Mid Left Dots */}
+          <div className="june-promo-shape shape-5" style={{ top: '450px', left: 'max(5px, calc(50% - 420px))' }}>
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="#a855f7" stroke="#000000" strokeWidth="2">
+               <circle cx="12" cy="12" r="5" />
+             </svg>
+          </div>
+          {/* Mid Right ZigZag/Square */}
+          <div className="june-promo-shape shape-6" style={{ top: '400px', right: 'max(5px, calc(50% - 430px))' }}>
+             <svg width="32" height="32" viewBox="0 0 24 24" fill="#f97316" stroke="#000000" strokeWidth="2">
+               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+             </svg>
+          </div>
+          {/* Neobrutalist Countdown Timer */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            backgroundColor: '#ffffff',
+            border: '3px solid #000000',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            boxShadow: '4px 4px 0px #000000',
+            marginBottom: '28px',
+            zIndex: 2,
+            maxWidth: '420px',
+            width: 'calc(100% - 32px)',
+            textAlign: 'center'
           }}>
-            <div className="banner-hover-overlay" style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(217, 119, 6, 0.02)',
-              transition: 'var(--transition-fast)',
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '900',
+              color: '#ff7800',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              marginBottom: '8px',
               display: 'flex',
-              alignItems: 'flex-end',
-              padding: '20px'
+              alignItems: 'center',
+              gap: '6px',
+              justifyContent: 'center'
             }}>
+              <Zap size={13} fill="#ff7800" strokeWidth={0} />
+              Ưu đãi Tháng 6 sẽ khép lại sau:
+            </span>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center' }}>
+              {[
+                { label: 'NGÀY', value: timeLeft.days },
+                { label: 'GIỜ', value: timeLeft.hours },
+                { label: 'PHÚT', value: timeLeft.minutes },
+                { label: 'GIÂY', value: timeLeft.seconds }
+              ].map((item, idx) => (
+                <React.Fragment key={idx}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{
+                      backgroundColor: '#0066ff',
+                      color: '#ffffff',
+                      border: '2px solid #000000',
+                      borderRadius: '8px',
+                      fontSize: '18px',
+                      fontWeight: '850',
+                      minWidth: '42px',
+                      height: '42px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '2px 2px 0px #000000'
+                    }}>
+                      {String(item.value).padStart(2, '0')}
+                    </div>
+                    <span style={{ fontSize: '9px', fontWeight: '800', color: '#000000', marginTop: '4px' }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {idx < 3 && (
+                    <span style={{
+                      fontSize: '20px',
+                      fontWeight: '900',
+                      color: '#000000',
+                      alignSelf: 'flex-start',
+                      marginTop: '6px'
+                    }}>:</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          {/* Left Sticker 1 (Yellow, top) */}
+          <div className="june-promo-sticker-left" style={{
+            position: 'absolute',
+            left: 'max(12px, calc(50% - 410px - 170px))',
+            top: '260px',
+            transform: 'rotate(-12deg)',
+            zIndex: 10,
+            cursor: 'default',
+            userSelect: 'none'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '120px',
+              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              filter: 'drop-shadow(4px 4px 0px #000000)'
+            }}>
+              <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '100%', height: '100%', fill: '#facc15' }}>
+                <path d="M50 0 L58 20 L78 12 L70 32 L88 32 L76 48 L92 58 L74 66 L82 86 L62 80 L58 100 L46 84 L32 94 L28 74 L8 78 L20 62 L4 48 L22 42 L12 22 L32 26 L38 6 Z" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+              </svg>
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '13px',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: 'var(--color-secondary)',
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-sm)'
+                position: 'relative',
+                textAlign: 'center',
+                color: '#000000',
+                fontWeight: '900',
+                fontSize: '12px',
+                lineHeight: '1.1',
+                fontFamily: 'var(--font-primary)'
               }}>
-                <span>Xem chi tiết</span>
+                DEAL HỜI<br />THÁNG 6!
               </div>
             </div>
           </div>
 
+          {/* Left Sticker 2 (Green, bottom) */}
+          <div className="june-promo-sticker-left" style={{
+            position: 'absolute',
+            left: 'max(20px, calc(50% - 410px - 120px))',
+            top: '500px',
+            transform: 'rotate(15deg)',
+            zIndex: 10,
+            cursor: 'default',
+            userSelect: 'none'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '90px',
+              height: '90px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              filter: 'drop-shadow(3px 3px 0px #000000)'
+            }}>
+              <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '100%', height: '100%', fill: '#22c55e' }}>
+                <path d="M50 0 L58 20 L78 12 L70 32 L88 32 L76 48 L92 58 L74 66 L82 86 L62 80 L58 100 L46 84 L32 94 L28 74 L8 78 L20 62 L4 48 L22 42 L12 22 L32 26 L38 6 Z" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+              </svg>
+              <div style={{
+                position: 'relative',
+                textAlign: 'center',
+                color: '#ffffff',
+                fontWeight: '900',
+                fontSize: '10px',
+                lineHeight: '1.1',
+                fontFamily: 'var(--font-primary)'
+              }}>
+                MÁY XỊN<br />GIÁ MỀM
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sticker 1 (Orange, top) */}
+          <div className="june-promo-sticker-right" style={{
+            position: 'absolute',
+            right: 'max(12px, calc(50% - 410px - 170px))',
+            top: '280px',
+            transform: 'rotate(10deg)',
+            zIndex: 10,
+            cursor: 'default',
+            userSelect: 'none'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '120px',
+              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              filter: 'drop-shadow(4px 4px 0px #000000)'
+            }}>
+              <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '100%', height: '100%', fill: '#ff7800' }}>
+                <path d="M50 0 L58 20 L78 12 L70 32 L88 32 L76 48 L92 58 L74 66 L82 86 L62 80 L58 100 L46 84 L32 94 L28 74 L8 78 L20 62 L4 48 L22 42 L12 22 L32 26 L38 6 Z" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+              </svg>
+              <div style={{
+                position: 'relative',
+                textAlign: 'center',
+                color: '#ffffff',
+                fontWeight: '900',
+                fontSize: '11px',
+                lineHeight: '1.1',
+                fontFamily: 'var(--font-primary)'
+              }}>
+                UY TÍN<br />100%
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sticker 2 (Pink, bottom) */}
+          <div className="june-promo-sticker-right" style={{
+            position: 'absolute',
+            right: 'max(20px, calc(50% - 410px - 120px))',
+            top: '520px',
+            transform: 'rotate(-8deg)',
+            zIndex: 10,
+            cursor: 'default',
+            userSelect: 'none'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '90px',
+              height: '90px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              filter: 'drop-shadow(3px 3px 0px #000000)'
+            }}>
+              <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '100%', height: '100%', fill: '#f43f5e' }}>
+                <path d="M50 0 L58 20 L78 12 L70 32 L88 32 L76 48 L92 58 L74 66 L82 86 L62 80 L58 100 L46 84 L32 94 L28 74 L8 78 L20 62 L4 48 L22 42 L12 22 L32 26 L38 6 Z" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+              </svg>
+              <div style={{
+                position: 'relative',
+                textAlign: 'center',
+                color: '#ffffff',
+                fontWeight: '900',
+                fontSize: '10px',
+                lineHeight: '1.1',
+                fontFamily: 'var(--font-primary)'
+              }}>
+                ĐẶT NGAY<br />KẺO LỠ
+              </div>
+            </div>
+          </div>
+
+          <div className="june-promo-grid">
+            {assets.slice(0, 5).map((item) => {
+              // Fix NaN rent count bug by stripping non-digit chars from ID
+              const numericId = parseInt((item.id || '').toString().replace(/\D/g, '')) || 1;
+              const rentalsCount = 150 + (numericId % 15) * 23;
+
+              return (
+                <div key={item.id} style={{
+                  backgroundColor: '#fff',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '2px solid #000000',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  padding: '8px'
+                }}
+                onClick={() => {
+                  setSelectedAssetId(item.id);
+                  setCurrentPage('asset-detail');
+                }}
+                onMouseOver={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
+                onMouseOut={(e) => e.currentTarget.style.borderColor = '#000000'}
+                >
+                  {/* Centered Image Area */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    height: '80px',
+                    marginBottom: '8px',
+                    backgroundColor: '#fff'
+                  }}>
+                    <img src={item.imageUrl} alt={item.title} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                  </div>
+                  
+                  {/* Content */}
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'left' }}>
+                    <h3 style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      color: '#000000',
+                      textTransform: 'uppercase',
+                      lineHeight: '1.25',
+                      marginBottom: '2px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      minHeight: '28px'
+                    }}>{item.title}</h3>
+                    <p style={{ fontSize: '9px', color: '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                      {rentalsCount} lượt thuê
+                    </p>
+                    
+                    <div style={{ marginTop: 'auto', textAlign: 'center' }}>
+                      <div style={{ textDecoration: 'line-through', color: '#ef4444', fontSize: '9px', fontWeight: '600', marginBottom: '0px' }}>
+                        {formatPrice(Math.round(item.pricePerDay * 1.23))}VND
+                      </div>
+                      <div style={{ color: '#0066ff', fontSize: '13px', fontWeight: '800' }}>
+                        {formatPrice(item.pricePerDay)}VNĐ<span style={{ fontSize: '9px', color: '#64748b', fontWeight: '500' }}>/ngày</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Feature Badges (Trust badges like Phong Vu hot promos) */}
-      <section className="container" style={{ marginBottom: '50px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '20px'
-        }}>
-          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
-            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Giá Thuê Cực Tốt</h4>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Tiết kiệm đến 80% so với mua thiết bị mới.</p>
-          </div>
-          
-          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
-            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Bảo Hiểm Thiết Bị</h4>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Yên tâm sử dụng tác nghiệp, quay phim chụp ảnh.</p>
-          </div>
 
-          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
-            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Duyệt Thuê Nhanh</h4>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Thủ tục xác minh trực tuyến tiện lợi, an toàn.</p>
-          </div>
-
-          <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none' }}>
-            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-dark)', marginBottom: '4px' }}>Kết Nối Creator</h4>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>Cộng đồng sáng tạo ảnh và phim chuyên nghiệp.</p>
-          </div>
-        </div>
-      </section>
 
       {/* CSS selector classes for side menu and grid layout overrides */}
       <style>{`

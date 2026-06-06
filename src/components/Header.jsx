@@ -42,11 +42,24 @@ export default function Header({ currentPage, setCurrentPage }) {
           background-color: rgba(255, 255, 255, 0.15);
           color: #fff !important;
         }
+
+        .animated-nav-bg {
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-image: url("data:image/svg+xml,%3Csvg width='180' height='46' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='rgba%28255,255,255,0.4%29'%3E%3Ccircle cx='60' cy='8' r='5.5' /%3E%3Ccircle cx='80' cy='8' r='5.5' /%3E%3Ccircle cx='100' cy='8' r='5.5' /%3E%3Ccircle cx='120' cy='8' r='5.5' /%3E%3C/g%3E%3Cg fill='rgba%28255,255,255,0.28%29'%3E%3Ccircle cx='45' cy='18' r='4.25' /%3E%3Ccircle cx='65' cy='18' r='4.25' /%3E%3Ccircle cx='85' cy='18' r='4.25' /%3E%3Ccircle cx='105' cy='18' r='4.25' /%3E%3C/g%3E%3Cg fill='rgba%28255,255,255,0.18%29'%3E%3Ccircle cx='30' cy='28' r='3' /%3E%3Ccircle cx='50' cy='28' r='3' /%3E%3Ccircle cx='70' cy='28' r='3' /%3E%3Ccircle cx='90' cy='28' r='3' /%3E%3C/g%3E%3Cg fill='rgba%28255,255,255,0.08%29'%3E%3Ccircle cx='15' cy='38' r='1.75' /%3E%3Ccircle cx='35' cy='38' r='1.75' /%3E%3Ccircle cx='55' cy='38' r='1.75' /%3E%3Ccircle cx='75' cy='38' r='1.75' /%3E%3C/g%3E%3C/svg%3E");
+          background-size: 180px 46px;
+          background-position: left 20px center;
+          background-repeat: no-repeat;
+          opacity: 1;
+          pointer-events: none;
+          z-index: 0;
+        }
       `}</style>
 
       {/* Bottom Nav -> Moved to Top */}
-      <div style={{ backgroundColor: 'var(--color-primary)', width: '100%' }}>
-        <div className="container">
+      <div style={{ backgroundColor: 'var(--color-primary)', width: '100%', position: 'relative', overflow: 'hidden' }}>
+        <div className="animated-nav-bg"></div>
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <nav className="bottom-nav" style={{ display: 'flex', gap: '12px', padding: '4px 20px', margin: 0, justifyContent: 'center', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
             <a
               href="#"
@@ -121,7 +134,7 @@ export default function Header({ currentPage, setCurrentPage }) {
         </a>
 
         {/* Search Bar */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '600px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '600px', marginTop: '16px' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
