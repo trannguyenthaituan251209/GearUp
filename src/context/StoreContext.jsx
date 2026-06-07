@@ -21,7 +21,10 @@ const mapAssetFromDB = (a) => ({
   location: a.location,
   description: a.description,
   specs: a.specs,
-  status: a.status
+  status: a.status,
+  mount: a.mount || '',
+  cameraType: a.camera_type || '',
+  sensorType: a.sensor_type || ''
 });
 
 const mapAssetToDB = (a) => ({
@@ -37,7 +40,10 @@ const mapAssetToDB = (a) => ({
   location: a.location,
   description: a.description,
   specs: a.specs,
-  status: a.status
+  status: a.status,
+  mount: a.mount,
+  camera_type: a.cameraType,
+  sensor_type: a.sensorType
 });
 
 const mapBookingFromDB = (b) => ({
@@ -555,6 +561,30 @@ export const StoreProvider = ({ children }) => {
     setAssets(prev => prev.map((a) => a.id === assetId ? { ...a, status } : a));
   };
 
+  const updateAssetDetails = async (assetId, updatedData) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const dbData = {
+          title: updatedData.title,
+          category: updatedData.category,
+          location: updatedData.location,
+          price_per_day: updatedData.pricePerDay,
+          image_url: updatedData.imageUrl,
+          description: updatedData.description,
+          specs: updatedData.specs,
+          mount: updatedData.mount,
+          camera_type: updatedData.cameraType,
+          sensor_type: updatedData.sensorType
+        };
+        await supabase.from('assets').update(dbData).eq('id', assetId);
+      } catch (err) {
+        console.warn('[Supabase] Failed to update asset details:', err);
+      }
+    }
+    setAssets(prev => prev.map((a) => a.id === assetId ? { ...a, ...updatedData } : a));
+  };
+
   const addBooking = async (newBooking) => {
     const bookingRecord = {
       id: `booking-${Date.now()}`,
@@ -742,6 +772,7 @@ export const StoreProvider = ({ children }) => {
         updateBanner,
         deleteBanner,
         isAppLoading,
+        updateAssetDetails
       }}
     >
       {children}

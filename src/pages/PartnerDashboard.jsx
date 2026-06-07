@@ -16,11 +16,13 @@ import {
   CheckCircle,
   FileText,
   MapPin,
-  Calendar
+  Calendar,
+  Edit3
 } from 'lucide-react';
+import AssetEditModal from '../components/AssetEditModal';
 
 export default function PartnerDashboard() {
-  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset } = useContext(StoreContext);
+  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails } = useContext(StoreContext);
   
   // Tab navigation: 'overview' | 'listings' | 'requests' | 'add-new'
   const [activeTab, setActiveTab] = useState('overview');
@@ -33,6 +35,12 @@ export default function PartnerDashboard() {
   const [description, setDescription] = useState('');
   const [specsText, setSpecsText] = useState('');
   const [imageSelect, setImageSelect] = useState('/camera.png');
+  const [mount, setMount] = useState('');
+  const [cameraType, setCameraType] = useState('');
+  const [sensorType, setSensorType] = useState('');
+
+  // Editing Asset State
+  const [editingAsset, setEditingAsset] = useState(null);
 
   // Filter assets owned by this partner (fallback to 'Nguyễn Minh Quân' for demo context)
   const myAssets = assets.filter(a => 
@@ -123,6 +131,9 @@ export default function PartnerDashboard() {
       imageUrl: imageSelect,
       description,
       specs: specsArray.length > 0 ? specsArray : ['Hoạt động hoàn hảo', 'Chất lượng cao'],
+      mount,
+      cameraType,
+      sensorType,
       ownerId: user?.id || 'demo-user-id',
       ownerName: user?.name || 'Nguyễn Minh Quân'
     });
@@ -135,9 +146,20 @@ export default function PartnerDashboard() {
     setDescription('');
     setSpecsText('');
     setImageSelect('/camera.png');
+    setMount('');
+    setCameraType('');
+    setSensorType('');
 
     // Redirect
     setActiveTab('listings');
+  };
+
+  const handleSaveEdit = (updatedData) => {
+    if (editingAsset) {
+      updateAssetDetails(editingAsset.id, updatedData);
+      alert('Đã cập nhật thông tin thiết bị thành công!');
+      setEditingAsset(null);
+    }
   };
 
   return (
@@ -440,31 +462,49 @@ export default function PartnerDashboard() {
                             {asset.status === 'paused' ? 'Ngừng thuê' : 'Đang cho thuê'}
                           </span>
                           
-                          {/* Toggle Status Button */}
-                          <button 
-                            className="btn btn-outline btn-sm"
-                            style={{ 
-                              padding: '4px 8px', 
-                              fontSize: '11px', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              borderColor: asset.status === 'paused' ? 'var(--color-success)' : 'var(--color-border)'
-                            }}
-                            onClick={() => handleToggleAssetStatus(asset.id, asset.status)}
-                          >
-                            {asset.status === 'paused' ? (
-                              <>
-                                <Eye size={12} />
-                                <span>Kích hoạt</span>
-                              </>
-                            ) : (
-                              <>
-                                <EyeOff size={12} />
-                                <span>Tạm dừng</span>
-                              </>
-                            )}
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {/* Toggle Status Button */}
+                            <button 
+                              className="btn btn-outline btn-sm"
+                              style={{ 
+                                padding: '4px 8px', 
+                                fontSize: '11px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px',
+                                borderColor: asset.status === 'paused' ? 'var(--color-success)' : 'var(--color-border)'
+                              }}
+                              onClick={() => handleToggleAssetStatus(asset.id, asset.status)}
+                            >
+                              {asset.status === 'paused' ? (
+                                <>
+                                  <Eye size={12} />
+                                  <span>Kích hoạt</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff size={12} />
+                                  <span>Tạm dừng</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Edit Button */}
+                            <button 
+                              className="btn btn-primary btn-sm"
+                              style={{ 
+                                padding: '4px 8px', 
+                                fontSize: '11px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px'
+                              }}
+                              onClick={() => setEditingAsset(asset)}
+                            >
+                              <Edit3 size={12} />
+                              <span>Sửa</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -648,15 +688,53 @@ export default function PartnerDashboard() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Thông số kỹ thuật nổi bật (Phân cách bằng dấu phẩy)</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  placeholder="Ví dụ: Cảm biến 61MP, Quay phim 8K, 3-axis stabilization..."
-                  value={specsText}
-                  onChange={(e) => setSpecsText(e.target.value)}
-                />
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Ngàm máy ảnh (Mount)</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="VD: Sony E, Canon RF..."
+                    value={mount}
+                    onChange={(e) => setMount(e.target.value)}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Loại máy ảnh (Type)</label>
+                  <select className="form-control" value={cameraType} onChange={(e) => setCameraType(e.target.value)}>
+                    <option value="">Không xác định</option>
+                    <option value="Mirrorless">Mirrorless</option>
+                    <option value="DSLR">DSLR</option>
+                    <option value="Compact">Compact</option>
+                    <option value="Action Cam">Action Cam</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Loại cảm biến (Sensor)</label>
+                  <select className="form-control" value={sensorType} onChange={(e) => setSensorType(e.target.value)}>
+                    <option value="">Không xác định</option>
+                    <option value="Full-frame">Full-frame</option>
+                    <option value="APS-C (Crop)">APS-C (Crop)</option>
+                    <option value="Micro Four Thirds">Micro Four Thirds</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Thông số kỹ thuật chung (Phân cách bằng dấu phẩy)</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Ví dụ: Quay phim 8K, 3-axis stabilization..."
+                    value={specsText}
+                    onChange={(e) => setSpecsText(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
@@ -680,6 +758,14 @@ export default function PartnerDashboard() {
 
       </main>
 
+      {/* Edit Modal */}
+      {editingAsset && (
+        <AssetEditModal
+          asset={editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }

@@ -192,7 +192,22 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
           <div style={{ marginBottom: '30px' }}>
             <h3 style={{ fontSize: '18px', marginBottom: '12px' }}>Thông số kỹ thuật</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-              {asset.specs.map((spec, index) => (
+              {asset.cameraType && (
+                <div className="glass-panel" style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary-hover)', border: '1px solid var(--color-primary)', borderRadius: 'var(--radius-sm)' }}>
+                  📷 Loại máy: {asset.cameraType}
+                </div>
+              )}
+              {asset.sensorType && (
+                <div className="glass-panel" style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary-hover)', border: '1px solid var(--color-primary)', borderRadius: 'var(--radius-sm)' }}>
+                  🔳 Cảm biến: {asset.sensorType}
+                </div>
+              )}
+              {asset.mount && (
+                <div className="glass-panel" style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary-hover)', border: '1px solid var(--color-primary)', borderRadius: 'var(--radius-sm)' }}>
+                  🔄 Ngàm: {asset.mount}
+                </div>
+              )}
+              {asset.specs && asset.specs.map((spec, index) => (
                 <div 
                   key={index} 
                   className="glass-panel" 
