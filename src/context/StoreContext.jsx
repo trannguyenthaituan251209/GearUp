@@ -92,6 +92,64 @@ const mapMessageToDB = (m) => ({
   created_at: m.createdAt
 });
 
+const mapBlogFromDB = (b) => ({
+  id: b.id,
+  title: b.title,
+  slug: b.slug,
+  content: b.content,
+  imageUrl: b.image_url,
+  category: b.category,
+  createdAt: b.created_at
+});
+
+const mapBlogToDB = (b) => ({
+  id: b.id,
+  title: b.title,
+  slug: b.slug,
+  content: b.content,
+  image_url: b.imageUrl,
+  category: b.category,
+  created_at: b.createdAt
+});
+
+const mapBannerFromDB = (b) => ({
+  id: b.id,
+  title: b.title,
+  imageUrl: b.image_url,
+  imageUrl2: b.image_url_2,
+  imageUrl3: b.image_url_3,
+  linkUrl: b.link_url,
+  position: b.position,
+  isActive: b.is_active,
+  effect: b.effect || 'none',
+  effectDuration: b.effect_duration || 3,
+  createdAt: b.created_at
+});
+
+const mapBannerToDB = (b) => ({
+  id: b.id,
+  title: b.title,
+  image_url: b.imageUrl,
+  image_url_2: b.imageUrl2,
+  image_url_3: b.imageUrl3,
+  link_url: b.linkUrl,
+  position: b.position,
+  is_active: b.isActive,
+  effect: b.effect,
+  effect_duration: b.effectDuration,
+  created_at: b.createdAt
+});
+
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const StoreProvider = ({ children }) => {
   const [assets, setAssets] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -101,8 +159,52 @@ export const StoreProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [blogs, setBlogs] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+
+  const fetchBlogs = async () => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const { data: blogsData, error: blogsError } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+        if (!blogsError && blogsData) {
+          setBlogs(blogsData.map(mapBlogFromDB));
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to fetch blogs:', err);
+      }
+    }
+  };
+
+  const fetchBanners = async () => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const { data: bannersData, error: bannersError } = await supabase.from('banners').select('*').order('created_at', { ascending: false });
+        if (!bannersError && bannersData) {
+          setBanners(bannersData.map(mapBannerFromDB));
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to fetch banners:', err);
+      }
+    }
+  };
 
 
+
+  useEffect(() => {
+    const initApp = async () => {
+      setIsAppLoading(true);
+      await fetchBlogs();
+      await fetchBanners();
+      // Thêm 1 chút thời gian chờ để hiệu ứng skeleton mượt mà hơn
+      setTimeout(() => {
+        setIsAppLoading(false);
+      }, 1000);
+    };
+    initApp();
+  }, []);
 
   // Auth state change handler
   useEffect(() => {
@@ -506,6 +608,107 @@ export const StoreProvider = ({ children }) => {
     setMessages(prev => [...prev, newMessage]);
   };
 
+  const addBlog = async (newBlog) => {
+    let blogRecord = {
+      id: generateUUID(),
+      createdAt: new Date().toISOString(),
+      ...newBlog
+    };
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const dbData = mapBlogToDB(blogRecord);
+        const { data, error } = await supabase.from('blogs').insert([dbData]).select().single();
+        if (!error && data) {
+          blogRecord = mapBlogFromDB(data);
+        } else if (error) {
+          console.warn('[Supabase] Insert blog error:', error);
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to insert blog:', err);
+      }
+    }
+    setBlogs(prev => [blogRecord, ...prev]);
+  };
+
+  const updateBlog = async (blogId, updatedData) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const dbData = {};
+        if (updatedData.title !== undefined) dbData.title = updatedData.title;
+        if (updatedData.slug !== undefined) dbData.slug = updatedData.slug;
+        if (updatedData.content !== undefined) dbData.content = updatedData.content;
+        if (updatedData.imageUrl !== undefined) dbData.image_url = updatedData.imageUrl;
+        if (updatedData.category !== undefined) dbData.category = updatedData.category;
+        await supabase.from('blogs').update(dbData).eq('id', blogId);
+      } catch (err) {
+        console.warn('[Supabase] Failed to update blog:', err);
+      }
+    }
+    setBlogs(prev => prev.map((b) => b.id === blogId ? { ...b, ...updatedData } : b));
+  };
+
+  const deleteBlog = async (id) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        await supabase.from('blogs').delete().eq('id', id);
+      } catch (err) {
+        console.warn('[Supabase] Failed to delete blog:', err);
+      }
+    }
+    setBlogs(prev => prev.filter(b => b.id !== id));
+  };
+
+  const addBanner = async (newBanner) => {
+    let bannerRecord = {
+      id: generateUUID(),
+      createdAt: new Date().toISOString(),
+      ...newBanner
+    };
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const dbData = mapBannerToDB(bannerRecord);
+        const { data, error } = await supabase.from('banners').insert([dbData]).select().single();
+        if (!error && data) {
+          bannerRecord = mapBannerFromDB(data);
+        } else if (error) {
+          console.warn('[Supabase] Insert banner error:', error);
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to insert banner:', err);
+      }
+    }
+    setBanners(prev => [bannerRecord, ...prev]);
+  };
+
+  const updateBanner = async (updatedBanner) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const dbData = mapBannerToDB(updatedBanner);
+        await supabase.from('banners').update(dbData).eq('id', updatedBanner.id);
+      } catch (err) {
+        console.warn('[Supabase] Failed to update banner:', err);
+      }
+    }
+    setBanners(prev => prev.map(b => b.id === updatedBanner.id ? updatedBanner : b));
+  };
+
+  const deleteBanner = async (id) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        await supabase.from('banners').delete().eq('id', id);
+      } catch (err) {
+        console.warn('[Supabase] Failed to delete banner:', err);
+      }
+    }
+    setBanners(prev => prev.filter(b => b.id !== id));
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -527,7 +730,18 @@ export const StoreProvider = ({ children }) => {
         updateAssetStatus,
         addBooking,
         updateBookingStatus,
-        addMessage
+        addMessage,
+        blogs,
+        fetchBlogs,
+        addBlog,
+        updateBlog,
+        deleteBlog,
+        banners,
+        fetchBanners,
+        addBanner,
+        updateBanner,
+        deleteBanner,
+        isAppLoading,
       }}
     >
       {children}

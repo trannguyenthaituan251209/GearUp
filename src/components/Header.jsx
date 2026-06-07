@@ -63,24 +63,16 @@ export default function Header({ currentPage, setCurrentPage }) {
           <nav className="bottom-nav" style={{ display: 'flex', gap: '12px', padding: '4px 20px', margin: 0, justifyContent: 'center', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
             <a
               href="#"
-              className={currentPage === 'home' ? 'active' : ''}
-              onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }}
+              className={currentPage === 'blog/gioi-thieu' ? 'active' : ''}
+              onClick={(e) => { e.preventDefault(); setCurrentPage('blog/gioi-thieu'); }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Home size={14} /> Cơ sở chính
+              <Home size={14} /> Giới thiệu
             </a>
             <a
               href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setCurrentPage('home');
-                setTimeout(() => {
-                  const element = document.getElementById('market-section');
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }, 100);
-              }}
+              className={currentPage === 'blog/giai-phap-doi-tac' ? 'active' : ''}
+              onClick={(e) => { e.preventDefault(); setCurrentPage('blog/giai-phap-doi-tac'); }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Briefcase size={14} /> Giải pháp dành cho đối tác
@@ -128,7 +120,8 @@ export default function Header({ currentPage, setCurrentPage }) {
 
             <a
               href="#"
-              onClick={(e) => e.preventDefault()}
+              className={currentPage === 'blog/chinh-sach' ? 'active' : ''}
+              onClick={(e) => { e.preventDefault(); setCurrentPage('blog/chinh-sach'); }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <FileText size={14} /> Chính sách và điều khoản người dùng

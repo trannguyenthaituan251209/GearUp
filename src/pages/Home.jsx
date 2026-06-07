@@ -44,27 +44,99 @@ const CATEGORIES = [
   { value: 'audio', label: 'Thiết bị âm thanh' }
 ];
 
-const SkeletonCard = () => (
-  <div className="skeleton-card">
-    <div className="skeleton-image skeleton-pulse" />
-    <div className="skeleton-content">
-      <div className="skeleton-meta">
-        <div className="skeleton-line skeleton-line-sm skeleton-pulse" />
-        <div className="skeleton-line skeleton-line-sm skeleton-pulse" style={{ width: '20%' }} />
-      </div>
-      <div className="skeleton-title-1 skeleton-pulse" />
-      <div className="skeleton-title-2 skeleton-pulse" />
-      <div className="skeleton-line skeleton-line-md skeleton-pulse" style={{ marginBottom: '12px' }} />
-      <div className="skeleton-footer">
-        <div className="skeleton-price skeleton-pulse" />
-        <div className="skeleton-button skeleton-pulse" />
+const SkeletonCard = () => {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton-image skeleton-pulse" />
+      <div className="skeleton-content">
+        <div className="skeleton-meta">
+          <div className="skeleton-line skeleton-line-sm skeleton-pulse" />
+          <div className="skeleton-line skeleton-line-sm skeleton-pulse" style={{ width: '20%' }} />
+        </div>
+        <div className="skeleton-title-1 skeleton-pulse" />
+        <div className="skeleton-title-2 skeleton-pulse" />
+        <div className="skeleton-line skeleton-line-md skeleton-pulse" style={{ marginBottom: '12px' }} />
+        <div className="skeleton-footer">
+          <div className="skeleton-price skeleton-pulse" />
+          <div className="skeleton-button skeleton-pulse" />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+const StackBanner = ({ banner, setCurrentPage }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Collect all valid image URLs from the banner
+  const images = [banner.imageUrl, banner.imageUrl2, banner.imageUrl3].filter(Boolean);
+
+  useEffect(() => {
+    if (images.length <= 1 || banner.effect !== 'stack-by-stack') return;
+
+    const duration = (banner.effectDuration || 3) * 1000;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, duration);
+
+    return () => clearInterval(timer);
+  }, [banner, images.length]);
+
+  if (!banner) return null;
+  
+  if (images.length <= 1 || banner.effect !== 'stack-by-stack') {
+    return (
+      <section className="container" style={{ marginBottom: '60px' }}>
+        <div className="horizontal-banner" style={{ borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e2e8f0', width: '100%' }} onClick={() => banner.linkUrl && setCurrentPage(banner.linkUrl)}>
+          <img src={images[0]} alt={banner.title || "Banner"} style={{ width: '100%', height: 'auto', display: 'block' }} />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="container" style={{ marginBottom: '60px' }}>
+      <div 
+        className="stack-banner" 
+        style={{ 
+          borderRadius: '16px', 
+          overflow: 'hidden', 
+          width: '100%', 
+          border: '1px solid #e2e8f0',
+          cursor: 'pointer',
+          display: 'grid' // Use CSS Grid for perfect stacking
+        }}
+        onClick={() => banner.linkUrl && setCurrentPage(banner.linkUrl)}
+      >
+        {images.map((imgSrc, index) => (
+          <img 
+            key={index}
+            src={imgSrc} 
+            alt={`${banner.title} ${index + 1}`} 
+            style={{ 
+              gridArea: '1 / 1 / 2 / 2', // Stack them all in the exact same cell
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover', // Ensures it spans fully without distortion
+              display: 'block',
+              opacity: index === currentIndex ? 1 : 0,
+              transition: 'opacity 0.8s ease-in-out'
+            }} 
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
 
 export default function Home({ setCurrentPage, setSelectedAssetId, filters, setFilters }) {
-  const { assets, user, setShowAuthModal, setShowPartnerModal } = useContext(StoreContext);
+  const { assets, user, setShowAuthModal, setShowPartnerModal, banners, isAppLoading } = useContext(StoreContext);
+
+  const homeVertical1 = banners?.find(b => (b.position === 'sidebar_1' || b.position === 'home_vertical_1') && b.isActive);
+  const homeVertical2 = banners?.find(b => (b.position === 'sidebar_2' || b.position === 'home_vertical_2') && b.isActive);
+  const homeHorizontal1 = banners?.find(b => (b.position === 'horizontal_1' || b.position === 'horizontal' || b.position === 'home_horizontal') && b.isActive);
+  const homeHorizontal2 = banners?.find(b => b.position === 'horizontal_2' && b.isActive);
+  const homeHorizontal3 = banners?.find(b => b.position === 'horizontal_3' && b.isActive);
   const [flashSaleTab, setFlashSaleTab] = useState('Nikon');
 
   const MOCK_FLASH_SALE_ASSETS = [
@@ -406,7 +478,41 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             display: none !important;
           }
         }
+        .skeleton {
+          background: #e2e8f0;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: var(--radius-lg);
+        }
+        @keyframes skeleton-loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
       `}</style>
+      
+      {isAppLoading ? (
+        <div style={{ width: '100%', minHeight: '80vh', padding: '30px 0' }}>
+          <section className="container" style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 240px', gap: '24px', alignItems: 'stretch' }} className="home-hero-layout">
+              <aside className="skeleton" style={{ height: '480px' }}></aside>
+              <div className="skeleton" style={{ height: '480px' }}></div>
+              <div className="hero-vertical-banners" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="skeleton" style={{ flex: 1, minHeight: '232px' }}></div>
+                <div className="skeleton" style={{ flex: 1, minHeight: '232px' }}></div>
+              </div>
+            </div>
+          </section>
+          <section className="container" style={{ marginBottom: '60px' }}>
+            <div className="skeleton" style={{ height: '280px', width: '100%', borderRadius: '16px' }}></div>
+          </section>
+          <section className="container" style={{ marginBottom: '60px' }}>
+            <div className="skeleton" style={{ height: '120px', width: '100%', borderRadius: '16px' }}></div>
+          </section>
+        </div>
+      ) : (
+        <>
+
       {/* Top Banner & Category Sidebar (Phong Vu Demo Style) */}
       <section className="container" style={{ paddingTop: '30px', marginBottom: '40px' }}>
         <div style={{
@@ -595,7 +701,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             </div>
           </div>
 
-          {/* Right Column - 2 Vertical Banners (running along the borders of the hero-section) */}
+          {/* Right Column - 2 Vertical Banners */}
           <div className="hero-vertical-banners" style={{
             display: 'flex',
             flexDirection: 'column',
@@ -603,119 +709,108 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             justifyContent: 'flex-start'
           }}>
             {/* Vertical Banner 1 */}
-            <div className="vertical-banner dark-theme-banner" style={{
-              width: '100%',
-              flex: 1,
-              backgroundImage: 'url(https://imgh.in/host/w78kem)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              boxShadow: 'none'
-            }} onClick={() => selectCategory('sony_cam')}>
-              <div className="banner-hover-overlay" style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+            {homeVertical1 && (
+              <div className="vertical-banner dark-theme-banner" style={{
                 width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(15, 23, 42, 0.05)',
-                transition: 'var(--transition-fast)',
-                display: 'flex',
-                alignItems: 'flex-end',
-                padding: '16px'
-              }}>
-                <div style={{
+                flex: 1,
+                minHeight: '232px',
+                backgroundImage: `url(${homeVertical1.imageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--color-border)',
+                position: 'relative',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                boxShadow: 'none'
+              }} onClick={() => homeVertical1.linkUrl && setCurrentPage(homeVertical1.linkUrl)}>
+                <div className="banner-hover-overlay" style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                  transition: 'var(--transition-fast)',
                   display: 'flex',
-                  alignItems: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  backdropFilter: 'blur(4px)'
+                  alignItems: 'flex-end',
+                  padding: '16px'
                 }}>
-                  <span>Thuê ngay</span>
+                  {homeVertical1.title && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      backdropFilter: 'blur(4px)'
+                    }}>
+                      <span>{homeVertical1.title}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Vertical Banner 2 */}
-            <div className="vertical-banner light-theme-banner" style={{
-              width: '100%',
-              flex: 1,
-              backgroundImage: 'url(https://imgh.in/host/n1mgnu)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              boxShadow: 'none'
-            }} onClick={(e) => {
-              e.preventDefault();
-              if (!user) {
-                alert('Vui lòng đăng nhập tài khoản trước khi đăng ký trở thành đối tác!');
-                setShowAuthModal(true);
-              } else if (!user.isPartner) {
-                setShowPartnerModal(true);
-              } else {
-                const { protocol, host, hostname, port, pathname } = window.location;
-                let partnerUrl = '';
-                if (hostname.includes('hatvaqua.online')) {
-                  partnerUrl = `${protocol}//partner.hatvaqua.online${pathname}`;
-                } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-                  partnerUrl = `${protocol}//partner.localhost:${port || '5173'}${pathname}?portal=partner`;
-                } else if (hostname.startsWith('partner.')) {
-                  partnerUrl = window.location.href;
-                } else {
-                  partnerUrl = `${protocol}//partner.${host}${pathname}`;
-                }
-                window.location.href = partnerUrl;
-              }
-            }}>
-              <div className="banner-hover-overlay" style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+            {homeVertical2 && (
+              <div className="vertical-banner light-theme-banner" style={{
                 width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(255, 120, 0, 0.02)',
-                transition: 'var(--transition-fast)',
-                display: 'flex',
-                alignItems: 'flex-end',
-                padding: '16px'
-              }}>
-                <div style={{
+                flex: 1,
+                minHeight: '232px',
+                backgroundImage: `url(${homeVertical2.imageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--color-border)',
+                position: 'relative',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                boxShadow: 'none'
+              }} onClick={() => homeVertical2.linkUrl && setCurrentPage(homeVertical2.linkUrl)}>
+                <div className="banner-hover-overlay" style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(255, 120, 0, 0.02)',
+                  transition: 'var(--transition-fast)',
                   display: 'flex',
-                  alignItems: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(255, 120, 0, 0.9)',
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  backdropFilter: 'blur(4px)'
+                  alignItems: 'flex-end',
+                  padding: '16px'
                 }}>
-                  <span>Đăng ký ngay</span>
+                  {homeVertical2.title && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(234, 88, 12, 0.9)',
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      backdropFilter: 'blur(4px)'
+                    }}>
+                      <span>{homeVertical2.title}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
-          
-
-
         </div>
       </section>
 
-      {/* Promo Section (Ưu Đãi) */}
+      {/* Banner Ngang 1 (Dưới Slider) */}
+      {homeHorizontal1 && <StackBanner banner={homeHorizontal1} setCurrentPage={setCurrentPage} />}
+
+      {/* June Promo Layout (Sleek Apple style inspired) */}
       <section className="container" style={{ marginBottom: '60px', position: 'relative', marginTop: '60px' }}>
         <div className="june-promo-banner">
           {/* Neobrutalist Geometric Shapes Background */}
@@ -1043,12 +1138,10 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             })}
           </div>
         </div>
-
-        {/* Banner ngang hẹp mới */}
-        <div style={{ marginTop: '20px', width: '100%', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          <img src="https://imgh.in/host/55jqs5" alt="Banner Ngang" style={{ width: '100%', height: 'auto', display: 'block' }} />
-        </div>
       </section>
+
+      {/* Banner Ngang 2 (Giữa trang, trên Flash Sale) */}
+      {homeHorizontal2 && <StackBanner banner={homeHorizontal2} setCurrentPage={setCurrentPage} />}
 
       {/* FLASH SALE ONLINE SECTION */}
       <section className="container" style={{ marginBottom: '60px' }}>
@@ -1382,7 +1475,11 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             grid-template-columns: 240px 1fr !important;
           }
           .hero-vertical-banners {
-            display: none !important;
+            grid-column: 1 / -1;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            height: auto !important;
+            width: 100% !important;
           }
         }
         
@@ -1413,6 +1510,12 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
       `}</style>
 
       {/* Marketplace Section */}
+        </>
+      )}
+
+      {/* Banner Ngang 3 (Cuối trang, trên Chợ Thiết Bị) */}
+      {homeHorizontal3 && <StackBanner banner={homeHorizontal3} setCurrentPage={setCurrentPage} />}
+
       <section className="container" id="market-section" style={{ paddingTop: '40px', marginBottom: '60px' }}>
         <div style={{ marginBottom: '30px' }}>
           <h2 style={{

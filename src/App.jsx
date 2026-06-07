@@ -10,6 +10,8 @@ import Register from './pages/Register';
 import PartnerRegister from './pages/PartnerRegister';
 import PartnerPortal from './pages/PartnerPortal';
 import PlatformDashboard from './pages/PlatformDashboard';
+import BlogPage from './pages/BlogPage';
+import WelcomePromoPage from './pages/WelcomePromoPage';
 import AuthModal from './components/AuthModal';
 
 function MainAppContent() {
@@ -58,6 +60,20 @@ function MainAppContent() {
       case 'partner-register':
         return <PartnerRegister setCurrentPage={setCurrentPage} />;
       default:
+        if (currentPage.startsWith('blog/')) {
+          const slug = currentPage.replace('blog/', '');
+          return <BlogPage slug={slug} setCurrentPage={setCurrentPage} />;
+        }
+        if (currentPage === 'promo/welcome') {
+          return (
+            <WelcomePromoPage 
+              setCurrentPage={setCurrentPage} 
+              setSelectedAssetId={setSelectedAssetId}
+              setFilters={setFilters}
+              filters={filters}
+            />
+          );
+        }
         return (
           <Home 
             setCurrentPage={setCurrentPage} 

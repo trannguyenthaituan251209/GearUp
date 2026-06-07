@@ -1,4 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
 import { supabase } from '../supabaseClient';
@@ -16,7 +18,11 @@ import {
   ChevronRight, 
   Calendar, 
   FileText, 
-  Briefcase 
+  Briefcase,
+  Edit3,
+  Trash2,
+  Plus,
+  Image
 } from 'lucide-react';
 
 export default function PlatformDashboard() {
@@ -27,7 +33,15 @@ export default function PlatformDashboard() {
     approvePartner,
     rejectPartner,
     assets,
-    bookings
+    bookings,
+    blogs,
+    addBlog,
+    updateBlog,
+    deleteBlog,
+    banners,
+    addBanner,
+    updateBanner,
+    deleteBanner
   } = useContext(StoreContext);
 
   // Auth local states
@@ -36,8 +50,92 @@ export default function PlatformDashboard() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Tabs: 'approvals' | 'assets' | 'users' | 'financials'
+  // Tabs: 'approvals' | 'assets' | 'users' | 'financials' | 'blogs'
   const [activeTab, setActiveTab] = useState('approvals');
+
+  // Blog Management States
+  const [showBlogForm, setShowBlogForm] = useState(false);
+  const [editingBlogId, setEditingBlogId] = useState(null);
+  const [blogForm, setBlogForm] = useState({ title: '', slug: '', imageUrl: '', content: '', category: 'news' });
+
+  const handleBlogSubmit = async (e) => {
+    e.preventDefault();
+    if (editingBlogId) {
+      await updateBlog(editingBlogId, blogForm);
+      alert('Đã cập nhật bài viết thành công!');
+    } else {
+      await addBlog(blogForm);
+      alert('Đã tạo bài viết mới!');
+    }
+    setShowBlogForm(false);
+    setBlogForm({ title: '', slug: '', imageUrl: '', content: '', category: 'news' });
+    setEditingBlogId(null);
+  };
+
+  // Banner Management States
+  const [showBannerForm, setShowBannerForm] = useState(false);
+  const [editingBannerId, setEditingBannerId] = useState(null);
+  const [bannerForm, setBannerForm] = useState({ title: '', imageUrl: '', imageUrl2: '', imageUrl3: '', linkUrl: '', position: 'sidebar_1', isActive: true, effect: 'none', effectDuration: 3 });
+
+  const handleBannerSubmit = async (e) => {
+    e.preventDefault();
+    if (editingBannerId) {
+      await updateBanner({ id: editingBannerId, ...bannerForm });
+      alert('Đã cập nhật banner thành công!');
+    } else {
+      await addBanner(bannerForm);
+      alert('Đã tạo banner mới!');
+    }
+    setShowBannerForm(false);
+    setBannerForm({ title: '', imageUrl: '', imageUrl2: '', imageUrl3: '', linkUrl: '', position: 'sidebar_1', isActive: true, effect: 'none', effectDuration: 3 });
+    setEditingBannerId(null);
+  };
+
+  const handleEditBanner = (banner) => {
+    let position = banner.position;
+    // Migrate old positions if editing
+    if (position === 'home_vertical_1' || position === 'blog_sidebar_1') position = 'sidebar_1';
+    if (position === 'home_vertical_2' || position === 'blog_sidebar_2') position = 'sidebar_2';
+    if (position === 'home_horizontal') position = 'horizontal';
+
+    setBannerForm({
+      title: banner.title,
+      imageUrl: banner.imageUrl || '',
+      imageUrl2: banner.imageUrl2 || '',
+      imageUrl3: banner.imageUrl3 || '',
+      linkUrl: banner.linkUrl || '',
+      position: position || 'sidebar_1',
+      isActive: banner.isActive,
+      effect: banner.effect || 'none',
+      effectDuration: banner.effectDuration || 3
+    });
+    setEditingBannerId(banner.id);
+    setShowBannerForm(true);
+  };
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa banner này không?')) {
+      await deleteBanner(bannerId);
+    }
+  };
+
+  const handleEditBlog = (blog) => {
+    setBlogForm({
+      title: blog.title,
+      slug: blog.slug,
+      imageUrl: blog.imageUrl || '',
+      content: blog.content,
+      category: blog.category || 'news'
+    });
+    setEditingBlogId(blog.id);
+    setShowBlogForm(true);
+  };
+
+  const handleDeleteBlog = async (blogId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) {
+      await deleteBlog(blogId);
+    }
+  };
 
   // Trigger state refresh for users database
   const [usersList, setUsersList] = useState([]);
@@ -397,81 +495,127 @@ export default function PlatformDashboard() {
       </header>
 
       {/* Main Workspace */}
-      <div className="container" style={{ flex: 1, padding: '40px 0 60px 0' }}>
+      <div className="container sso-main-container" style={{ flex: 1, padding: '40px 0 60px 0', display: 'flex', gap: '32px' }}>
         
-        {/* Page Head */}
-        <div style={{ marginBottom: '35px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
-            Bảng Quản Trị Hệ Thống GearUp
-          </h1>
-          <p style={{ color: '#64748b', marginTop: '6px' }}>
-            Giám sát hồ sơ đối tác mở cửa hàng, quản lý danh sách thiết bị công cộng và phân tích doanh thu 10% hoa hồng nền tảng.
-          </p>
-        </div>
+        {/* Sidebar */}
+        <aside className="sso-sidebar" style={{ width: '280px', flexShrink: 0 }}>
+          <div style={{ marginBottom: '35px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>
+              Bảng Quản Trị Hệ Thống
+            </h1>
+            <p style={{ color: '#64748b', marginTop: '6px', fontSize: '13px' }}>
+              Giám sát, quản lý hệ thống GearUp.
+            </p>
+          </div>
 
-        {/* Tab Selection */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid #cbd5e1',
-          marginBottom: '35px',
-          gap: '24px',
-          overflowX: 'auto'
-        }}>
-          <button 
-            onClick={() => setActiveTab('approvals')}
-            style={{
-              background: 'none', border: 'none', padding: '14px 4px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-              color: activeTab === 'approvals' ? '#0066ff' : '#64748b',
-              borderBottom: activeTab === 'approvals' ? '2.5px solid #0066ff' : '2.5px solid transparent',
-              display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>Phê Duyệt Đối Tác ({pendingStores.length})</span>
-          </button>
+          <div className="sso-sidebar-nav" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <button 
+              onClick={() => setActiveTab('approvals')}
+              style={{
+                background: activeTab === 'approvals' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'approvals' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <ShieldCheck size={18} />
+              <span style={{ flex: 1 }}>Phê Duyệt Đối Tác</span>
+              {pendingStores.length > 0 && (
+                <span style={{ backgroundColor: '#ef4444', color: '#fff', fontSize: '11px', padding: '2px 6px', borderRadius: '12px' }}>{pendingStores.length}</span>
+              )}
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('assets')}
-            style={{
-              background: 'none', border: 'none', padding: '14px 4px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-              color: activeTab === 'assets' ? '#0066ff' : '#64748b',
-              borderBottom: activeTab === 'assets' ? '2.5px solid #0066ff' : '2.5px solid transparent',
-              display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-            }}
-          >
-            <Camera size={16} />
-            <span>Danh Sách Thiết Bị ({assets.length})</span>
-          </button>
+            <button 
+              onClick={() => setActiveTab('assets')}
+              style={{
+                background: activeTab === 'assets' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'assets' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <Camera size={18} />
+              <span style={{ flex: 1 }}>Danh Sách Thiết Bị</span>
+              <span style={{ backgroundColor: '#e2e8f0', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '12px' }}>{assets.length}</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('users')}
-            style={{
-              background: 'none', border: 'none', padding: '14px 4px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-              color: activeTab === 'users' ? '#0066ff' : '#64748b',
-              borderBottom: activeTab === 'users' ? '2.5px solid #0066ff' : '2.5px solid transparent',
-              display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-            }}
-          >
-            <Users size={16} />
-            <span>Danh Sách Người Dùng ({usersList.length})</span>
-          </button>
+            <button 
+              onClick={() => setActiveTab('users')}
+              style={{
+                background: activeTab === 'users' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'users' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <Users size={18} />
+              <span style={{ flex: 1 }}>Danh Sách Người Dùng</span>
+              <span style={{ backgroundColor: '#e2e8f0', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '12px' }}>{usersList.length}</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('financials')}
-            style={{
-              background: 'none', border: 'none', padding: '14px 4px', fontSize: '15px', fontWeight: '700', cursor: 'pointer',
-              color: activeTab === 'financials' ? '#0066ff' : '#64748b',
-              borderBottom: activeTab === 'financials' ? '2.5px solid #0066ff' : '2.5px solid transparent',
-              display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-            }}
-          >
-            <DollarSign size={16} />
-            <span>Doanh Thu & Hoa Hồng Nền Tảng (10%)</span>
-          </button>
-        </div>
+            <button 
+              onClick={() => setActiveTab('financials')}
+              style={{
+                background: activeTab === 'financials' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'financials' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <DollarSign size={18} />
+              <span style={{ flex: 1 }}>Hoa Hồng Nền Tảng</span>
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('blogs')}
+              style={{
+                background: activeTab === 'blogs' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'blogs' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <FileText size={18} />
+              <span style={{ flex: 1 }}>Quản Lý Bài Viết</span>
+              <span style={{ backgroundColor: '#e2e8f0', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '12px' }}>{blogs?.length || 0}</span>
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('banners')}
+              style={{
+                background: activeTab === 'banners' ? '#eff6ff' : 'transparent',
+                border: 'none', padding: '12px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                color: activeTab === 'banners' ? '#0066ff' : '#475569',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', gap: '12px', whiteSpace: 'nowrap',
+                transition: 'background-color 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <Image size={18} />
+              <span style={{ flex: 1 }}>Quản Lý Banner</span>
+              <span style={{ backgroundColor: '#e2e8f0', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '12px' }}>{banners?.length || 0}</span>
+            </button>
+          </div>
+        </aside>
 
         {/* Tab Contents */}
-        <section>
+        <main style={{ flex: 1, minWidth: 0 }}>
           
           {/* TAB 1: PARTNER APPROVALS */}
           {activeTab === 'approvals' && (
@@ -900,7 +1044,537 @@ export default function PlatformDashboard() {
             </div>
           )}
 
-        </section>
+          {/* TAB 5: BLOG MANAGEMENT */}
+          {activeTab === 'blogs' && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '24px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+                  Quản Lý Bài Viết (CMS)
+                </h3>
+                {!showBlogForm && (
+                  <button
+                    onClick={() => {
+                      setBlogForm({ title: '', slug: '', imageUrl: '', content: '', category: 'news' });
+                      setEditingBlogId(null);
+                      setShowBlogForm(true);
+                    }}
+                    style={{
+                      backgroundColor: '#0066ff',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Plus size={16} /> Viết bài mới
+                  </button>
+                )}
+              </div>
+
+              {showBlogForm ? (
+                <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: '700' }}>
+                    {editingBlogId ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}
+                  </h4>
+                  <form onSubmit={handleBlogSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Tiêu đề bài viết</label>
+                      <input 
+                        type="text" 
+                        value={blogForm.title}
+                        onChange={(e) => setBlogForm({...blogForm, title: e.target.value})}
+                        required
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                        placeholder="Ví dụ: Giới thiệu về nền tảng GearUp"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Đường dẫn tĩnh (Slug)</label>
+                      <input 
+                        type="text" 
+                        value={blogForm.slug}
+                        onChange={(e) => setBlogForm({...blogForm, slug: e.target.value})}
+                        required
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                        placeholder="Ví dụ: gioi-thieu, chinh-sach"
+                      />
+                      <small style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '4px' }}>Đường dẫn không nên có dấu, ngăn cách bằng dấu gạch ngang.</small>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Danh mục bài viết</label>
+                      <select 
+                        value={blogForm.category}
+                        onChange={(e) => setBlogForm({...blogForm, category: e.target.value})}
+                        required
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', backgroundColor: '#fff' }}
+                      >
+                        <option value="news">Tin tức chung</option>
+                        <option value="promotion">Chương trình ưu đãi</option>
+                        <option value="platform">Thông tin nền tảng</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>URL Ảnh bìa (Không bắt buộc)</label>
+                      <input 
+                        type="text" 
+                        value={blogForm.imageUrl}
+                        onChange={(e) => setBlogForm({...blogForm, imageUrl: e.target.value})}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                        placeholder="https://imgh.in/host/..."
+                      />
+                    </div>
+                    <div style={{ marginBottom: '40px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Nội dung bài viết (Rich Text Editor)</label>
+                      <div style={{ backgroundColor: '#ffffff' }}>
+                        <ReactQuill 
+                          theme="snow" 
+                          value={blogForm.content} 
+                          onChange={(val) => setBlogForm({...blogForm, content: val})} 
+                          style={{ height: '300px' }}
+                          modules={{
+                            toolbar: [
+                              [{ 'header': [1, 2, 3, false] }, { 'size': ['small', false, 'large', 'huge'] }],
+                              ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+                              [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
+                              ['link', 'image'],
+                              ['clean']
+                            ]
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                      <button 
+                        type="submit"
+                        style={{ backgroundColor: '#10b981', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        {editingBlogId ? 'Lưu cập nhật' : 'Đăng bài viết'}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setShowBlogForm(false)}
+                        style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Hủy bỏ
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                        <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Tiêu đề</th>
+                        <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Danh mục</th>
+                        <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Đường dẫn (Slug)</th>
+                        <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Ngày tạo</th>
+                        <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b', textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {blogs && blogs.length > 0 ? blogs.map((blog) => (
+                        <tr key={blog.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {blog.imageUrl && <img src={blog.imageUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />}
+                            <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{blog.title}</span>
+                          </td>
+                          <td style={{ padding: '16px', fontSize: '13px', color: '#0f172a' }}>
+                            <span style={{ 
+                              backgroundColor: blog.category === 'promotion' ? '#fef08a' : (blog.category === 'platform' ? '#bfdbfe' : '#e2e8f0'), 
+                              padding: '4px 8px', borderRadius: '4px', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' 
+                            }}>
+                              {blog.category === 'promotion' ? 'Ưu đãi' : (blog.category === 'platform' ? 'Nền tảng' : 'Tin tức')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '16px', fontSize: '13px', fontFamily: 'monospace', color: '#3b82f6' }}>
+                            {blog.slug}
+                          </td>
+                          <td style={{ padding: '16px', fontSize: '13px', color: '#64748b' }}>
+                            {new Date(blog.createdAt).toLocaleDateString('vi-VN')}
+                          </td>
+                          <td style={{ padding: '16px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                              <button 
+                                onClick={() => handleEditBlog(blog)}
+                                style={{ background: 'none', border: '1px solid #cbd5e1', color: '#64748b', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
+                                title="Chỉnh sửa"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteBlog(blog.id)}
+                                style={{ background: 'none', border: '1px solid #fca5a5', color: '#ef4444', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
+                                title="Xóa"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                            Chưa có bài viết nào trong hệ thống.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: BANNERS MANAGEMENT */}
+          {activeTab === 'banners' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a' }}>
+                    <Image size={18} style={{ color: '#0066ff' }} />
+                    Danh Sách Banner Cửa Hàng
+                  </h3>
+                  {!showBannerForm && (
+                    <button 
+                      onClick={() => setShowBannerForm(true)}
+                      style={{ backgroundColor: '#0066ff', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Plus size={16} /> Tạo Banner Mới
+                    </button>
+                  )}
+                </div>
+
+                {showBannerForm ? (
+                  <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', marginBottom: '20px' }}>{editingBannerId ? 'Chỉnh sửa Banner' : 'Tạo Banner mới'}</h4>
+                    <form onSubmit={handleBannerSubmit}>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Tiêu đề Banner (Ghi chú)</label>
+                        <input 
+                          type="text" 
+                          value={bannerForm.title}
+                          onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
+                          required
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                          placeholder="Nhập tiêu đề banner..."
+                        />
+                      </div>
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>URL Hình ảnh (Link lấy từ imgh.in hoặc tương đương)</label>
+                        <input 
+                          type="url" 
+                          value={bannerForm.imageUrl}
+                          onChange={(e) => setBannerForm({...bannerForm, imageUrl: e.target.value})}
+                          required
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                          placeholder="https://imgh.in/host/..."
+                        />
+                      </div>
+                      
+                      {bannerForm.effect === 'stack-by-stack' && (
+                        <>
+                          <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>URL Hình ảnh 2 (Hiển thị luân phiên)</label>
+                            <input 
+                              type="url" 
+                              value={bannerForm.imageUrl2}
+                              onChange={(e) => setBannerForm({...bannerForm, imageUrl2: e.target.value})}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                              placeholder="https://imgh.in/host/..."
+                            />
+                          </div>
+                          <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>URL Hình ảnh 3 (Hiển thị luân phiên)</label>
+                            <input 
+                              type="url" 
+                              value={bannerForm.imageUrl3}
+                              onChange={(e) => setBannerForm({...bannerForm, imageUrl3: e.target.value})}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                              placeholder="https://imgh.in/host/..."
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#475569' }}>Đường dẫn đích (Khi click vào banner sẽ đến đâu? Ví dụ: blog/uu-dai-thang)</label>
+                        <input 
+                          type="text" 
+                          value={bannerForm.linkUrl}
+                          onChange={(e) => setBannerForm({...bannerForm, linkUrl: e.target.value})}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                          placeholder="blog/uu-dai-thang"
+                        />
+                      </div>
+                      <div style={{ marginBottom: '30px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={bannerForm.isActive}
+                            onChange={(e) => setBannerForm({...bannerForm, isActive: e.target.checked})}
+                            style={{ width: '18px', height: '18px' }}
+                          />
+                          Hiển thị Banner (Active)
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '30px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>Hiệu ứng luân phiên</label>
+                          <select 
+                            value={bannerForm.effect}
+                            onChange={(e) => setBannerForm({...bannerForm, effect: e.target.value})}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                          >
+                            <option value="none">Tĩnh (Không hiệu ứng)</option>
+                            <option value="stack-by-stack">Stack-by-Stack (3 Ảnh luân phiên)</option>
+                            <option value="carousel">Luân phiên (Carousel)</option>
+                          </select>
+                        </div>
+                        {bannerForm.effect === 'stack-by-stack' && (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>Thời gian chuyển (giây)</label>
+                            <input 
+                              type="number" 
+                              min="1"
+                              max="60"
+                              value={bannerForm.effectDuration}
+                              onChange={(e) => setBannerForm({...bannerForm, effectDuration: parseInt(e.target.value) || 3})}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Visual Layout Map Here */}
+                      <div style={{ marginBottom: '40px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: '#0f172a' }}>Vị trí hiển thị (Click chọn trực tiếp trên sơ đồ bên dưới)</label>
+                        <div style={{ 
+                          border: '2px dashed #cbd5e1', 
+                          padding: '24px', 
+                          borderRadius: '12px', 
+                          backgroundColor: '#f8fafc',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          maxWidth: '700px',
+                          margin: '0 auto'
+                        }}>
+                          {/* Header */}
+                          <div style={{ height: '40px', backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>HEADER</div>
+                          {/* Nav */}
+                          <div style={{ height: '30px', backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>NAVIGATION MENU</div>
+                          
+                          {/* Main area with sidebar */}
+                          <div style={{ display: 'flex', gap: '16px', minHeight: '300px' }}>
+                            {/* Content */}
+                            <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ flex: 1, backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>SLIDER TRANG CHỦ</div>
+                              
+                              <div 
+                                onClick={() => setBannerForm({...bannerForm, position: 'horizontal_1'})}
+                                style={{ height: '40px', backgroundColor: bannerForm.position === 'horizontal_1' ? '#3b82f6' : '#cbd5e1', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', transition: '0.2s', border: bannerForm.position === 'horizontal_1' ? '2px solid #2563eb' : '2px dashed #94a3b8' }}
+                              >
+                                BANNER NGANG 1 (Dưới Slider)
+                              </div>
+                              
+                              <div style={{ flex: 1, backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>FLASH SALE & SẢN PHẨM</div>
+
+                              <div 
+                                onClick={() => setBannerForm({...bannerForm, position: 'horizontal_2'})}
+                                style={{ height: '40px', backgroundColor: bannerForm.position === 'horizontal_2' ? '#3b82f6' : '#cbd5e1', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', transition: '0.2s', border: bannerForm.position === 'horizontal_2' ? '2px solid #2563eb' : '2px dashed #94a3b8' }}
+                              >
+                                BANNER NGANG 2 (Giữa Trang)
+                              </div>
+
+                              <div style={{ flex: 1, backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>CHỢ THIẾT BỊ</div>
+
+                              <div 
+                                onClick={() => setBannerForm({...bannerForm, position: 'horizontal_3'})}
+                                style={{ height: '40px', backgroundColor: bannerForm.position === 'horizontal_3' ? '#3b82f6' : '#cbd5e1', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', transition: '0.2s', border: bannerForm.position === 'horizontal_3' ? '2px solid #2563eb' : '2px dashed #94a3b8' }}
+                              >
+                                BANNER NGANG 3 (Trên Chợ Thiết Bị)
+                              </div>
+                            </div>
+
+                            {/* Sidebar */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div 
+                                onClick={() => setBannerForm({...bannerForm, position: 'sidebar_1'})}
+                                style={{ 
+                                  flex: 1, 
+                                  backgroundColor: bannerForm.position === 'sidebar_1' ? '#3b82f6' : '#cbd5e1', 
+                                  borderRadius: '6px', 
+                                  cursor: 'pointer', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  color: '#fff', 
+                                  fontWeight: '700', 
+                                  transition: '0.2s',
+                                  border: bannerForm.position === 'sidebar_1' ? '2px solid #2563eb' : '2px dashed #94a3b8'
+                                }}
+                              >
+                                BANNER SIDEBAR DỌC 1
+                              </div>
+                              <div 
+                                onClick={() => setBannerForm({...bannerForm, position: 'sidebar_2'})}
+                                style={{ 
+                                  flex: 1, 
+                                  backgroundColor: bannerForm.position === 'sidebar_2' ? '#3b82f6' : '#cbd5e1', 
+                                  borderRadius: '6px', 
+                                  cursor: 'pointer', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  color: '#fff', 
+                                  fontWeight: '700', 
+                                  transition: '0.2s',
+                                  border: bannerForm.position === 'sidebar_2' ? '2px solid #2563eb' : '2px dashed #94a3b8'
+                                }}
+                              >
+                                BANNER SIDEBAR DỌC 2
+                              </div>
+                              <div style={{ flex: 1, backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>CÁC WIDGET KHÁC</div>
+                            </div>
+                          </div>
+
+                          {/* Footer */}
+                          <div style={{ height: '50px', backgroundColor: '#e2e8f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 'bold' }}>FOOTER</div>
+                        </div>
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '12px',
+                          backgroundColor: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          color: '#1e3a8a',
+                          lineHeight: '1.5',
+                          maxWidth: '700px',
+                          margin: '16px auto 0'
+                        }}>
+                          <strong>💡 Lưu ý về phạm vi hiển thị:</strong><br/>
+                          - <strong>Banner Dọc (1, 2):</strong> Sẽ tự động đồng bộ xuất hiện trên cả cột bên phải của <em>Trang Chủ</em> lẫn cột phải của <em>Trang Bài Viết</em>.<br/>
+                          - <strong>Banner Ngang:</strong> Chỉ được thiết kế để hiển thị độc quyền tại phần nội dung chính của <em>Trang Chủ</em>.
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button 
+                          type="submit"
+                          style={{ backgroundColor: '#10b981', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          {editingBannerId ? 'Lưu cập nhật' : 'Thêm Banner'}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setShowBannerForm(false);
+                            setEditingBannerId(null);
+                            setBannerForm({ title: '', imageUrl: '', imageUrl2: '', imageUrl3: '', linkUrl: '', position: 'home_vertical_1', isActive: true, effect: 'none', effectDuration: 3 });
+                          }}
+                          style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '10px 20px', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Hủy bỏ
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                          <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Tiêu đề</th>
+                          <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Vị trí hiển thị</th>
+                          <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Trạng thái</th>
+                          <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '700', color: '#64748b', textAlign: 'right' }}>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {banners && banners.length > 0 ? banners.map((banner) => (
+                          <tr key={banner.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              {banner.imageUrl && <img src={banner.imageUrl} alt="" style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e2e8f0' }} />}
+                              <div>
+                                <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a', display: 'block' }}>{banner.title}</span>
+                                <span style={{ fontSize: '12px', color: '#64748b' }}>{banner.linkUrl}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '16px', fontSize: '13px', color: '#0f172a', fontWeight: '600' }}>
+                              {banner.position === 'sidebar_1' && 'Sidebar Dọc 1'}
+                              {banner.position === 'sidebar_2' && 'Sidebar Dọc 2'}
+                              {banner.position === 'horizontal' && 'Banner Ngang (Nội dung)'}
+                              {/* Fallbacks for older banners */}
+                              {banner.position === 'home_vertical_1' && 'Sidebar Dọc 1'}
+                              {banner.position === 'home_vertical_2' && 'Sidebar Dọc 2'}
+                              {banner.position === 'home_horizontal' && 'Banner Ngang'}
+                              {banner.position === 'blog_sidebar_1' && 'Sidebar Dọc 1'}
+                              {banner.position === 'blog_sidebar_2' && 'Sidebar Dọc 2'}
+                            </td>
+                            <td style={{ padding: '16px' }}>
+                              <span style={{ 
+                                backgroundColor: banner.isActive ? '#dcfce7' : '#fee2e2', 
+                                color: banner.isActive ? '#166534' : '#991b1b',
+                                padding: '4px 8px', borderRadius: '4px', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase' 
+                              }}>
+                                {banner.isActive ? 'Đang bật' : 'Đang tắt'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '16px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <button 
+                                  onClick={() => handleEditBanner(banner)}
+                                  style={{ background: 'none', border: '1px solid #cbd5e1', color: '#64748b', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
+                                  title="Chỉnh sửa"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteBanner(banner.id)}
+                                  style={{ background: 'none', border: '1px solid #fca5a5', color: '#ef4444', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
+                                  title="Xóa"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                              Chưa có banner nào. Hãy tạo banner đầu tiên!
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
 
       </div>
 
