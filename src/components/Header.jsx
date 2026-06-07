@@ -1,8 +1,10 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText, Bell, ShoppingCart } from 'lucide-react';
+import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText, Bell, ShoppingCart, Menu, X } from 'lucide-react';
 
 export default function Header({ currentPage, setCurrentPage }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   const {
     user,
     setShowAuthModal,
@@ -54,13 +56,73 @@ export default function Header({ currentPage, setCurrentPage }) {
           pointer-events: none;
           z-index: 0;
         }
+
+        .header-top-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          gap: 24px;
+          border-bottom: 1px solid var(--color-border);
+        }
+
+        .header-search-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          max-width: 600px;
+          margin-top: 16px;
+        }
+
+        @media (max-width: 768px) {
+          .header-top-row {
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+          }
+          .header-search-container {
+            order: 3;
+            min-width: 100%;
+            margin-top: 8px;
+          }
+          .bottom-nav {
+            justify-content: flex-start !important;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px !important;
+            flex-wrap: nowrap !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+          }
+          .bottom-nav::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera*/
+          }
+          .bottom-nav a {
+            white-space: nowrap;
+          }
+          .user-name-display, .header-search-keywords {
+            display: none !important;
+          }
+          .desktop-nav-bar {
+            display: none !important;
+          }
+          .mobile-hamburger {
+            display: flex !important;
+          }
+        }
+        .mobile-hamburger {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
       `}</style>
 
-      {/* Bottom Nav -> Moved to Top */}
-      <div style={{ backgroundColor: 'var(--color-primary)', width: '100%', position: 'relative', overflow: 'hidden' }}>
+      {/* Bottom Nav -> Moved to Top (Desktop Only) */}
+      <div className="desktop-nav-bar" style={{ backgroundColor: 'var(--color-primary)', width: '100%', position: 'relative', overflow: 'hidden' }}>
         <div className="animated-nav-bg"></div>
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <nav className="bottom-nav" style={{ display: 'flex', gap: '12px', padding: '4px 20px', margin: 0, justifyContent: 'center', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
+          <nav className="bottom-nav" style={{ display: 'flex', gap: '12px', padding: '8px 20px', margin: 0, justifyContent: 'center', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
             <a
               href="#"
               className={currentPage === 'blog/gioi-thieu' ? 'active' : ''}
@@ -131,14 +193,19 @@ export default function Header({ currentPage, setCurrentPage }) {
       </div>
 
       {/* Top Row -> Moved to Bottom */}
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', gap: '24px', borderBottom: '1px solid var(--color-border)' }}>
-        {/* Logo */}
-        <a href="#" className="logo-link" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '150px', height: '54px', overflow: 'hidden' }}>
-          <img src="https://imgh.in/host/yxaxut" alt="GearUp Logo" style={{ height: '54px', objectFit: 'contain', transform: 'scale(3)' }} />
-        </a>
+      <div className="container header-top-row">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="mobile-hamburger" onClick={() => setIsMobileMenuOpen(true)}>
+            <Menu size={24} />
+          </div>
+          {/* Logo */}
+          <a href="#" className="logo-link" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '120px', height: '48px', overflow: 'hidden' }}>
+            <img src="https://imgh.in/host/yxaxut" alt="GearUp Logo" style={{ height: '48px', objectFit: 'contain', transform: 'scale(2)' }} />
+          </a>
+        </div>
 
         {/* Search Bar */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '600px', marginTop: '16px' }}>
+        <div className="header-search-container">
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
@@ -155,7 +222,7 @@ export default function Header({ currentPage, setCurrentPage }) {
               }}
             />
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '11px', color: 'var(--color-text-muted)', paddingLeft: '16px' }}>
+          <div className="header-search-keywords" style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '11px', color: 'var(--color-text-muted)', paddingLeft: '16px' }}>
             <span>Từ khóa:</span>
             {['Canon R50', 'G7x', 'Sony A7IV', 'Flycam'].map((keyword) => (
               <a href="#" key={keyword} style={{ color: 'var(--color-text-main)', textDecoration: 'none', fontWeight: '500', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = 'var(--color-primary)'} onMouseOut={(e) => e.target.style.color = 'var(--color-text-main)'} onClick={(e) => e.preventDefault()}>{keyword}</a>
@@ -223,6 +290,63 @@ export default function Header({ currentPage, setCurrentPage }) {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex'
+        }}>
+          {/* Menu Panel */}
+          <div style={{
+            width: '80%',
+            maxWidth: '300px',
+            backgroundColor: '#ffffff',
+            height: '100%',
+            boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid #f1f5f9' }}>
+              <img src="https://imgh.in/host/yxaxut" alt="GearUp Logo" style={{ height: '32px', objectFit: 'contain', transform: 'scale(2)', marginLeft: '16px' }} />
+              <X size={24} cursor="pointer" onClick={() => setIsMobileMenuOpen(false)} style={{ color: 'var(--color-text-main)' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', padding: '12px' }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('blog/gioi-thieu'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600', borderBottom: '1px solid #f1f5f9' }}>
+                <Home size={18} style={{ color: 'var(--color-primary)' }} /> Giới thiệu
+              </a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('blog/giai-phap-doi-tac'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600', borderBottom: '1px solid #f1f5f9' }}>
+                <Briefcase size={18} style={{ color: 'var(--color-primary)' }} /> Giải pháp đối tác
+              </a>
+              {user && (
+                <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('customer-dashboard'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600', borderBottom: '1px solid #f1f5f9' }}>
+                  <User size={18} style={{ color: 'var(--color-primary)' }} /> Lịch Sử Thuê
+                </a>
+              )}
+              {user && user.isPartner ? (
+                <a href="#" onClick={(e) => { e.preventDefault(); window.location.href = getPartnerUrl(); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600', borderBottom: '1px solid #f1f5f9' }}>
+                  <Briefcase size={18} style={{ color: 'var(--color-primary)' }} /> Đến trang cửa hàng
+                </a>
+              ) : (
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); if (!user) { alert('Vui lòng đăng nhập!'); setShowAuthModal(true); } else { setCurrentPage('partner-register'); } }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600', borderBottom: '1px solid #f1f5f9' }}>
+                  <UserPlus size={18} style={{ color: 'var(--color-primary)' }} /> Đăng ký đối tác
+                </a>
+              )}
+              <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('blog/chinh-sach'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 12px', textDecoration: 'none', color: 'var(--color-text-main)', fontWeight: '600' }}>
+                <FileText size={18} style={{ color: 'var(--color-primary)' }} /> Chính sách & điều khoản
+              </a>
+            </div>
+          </div>
+          
+          {/* Click outside to close */}
+          <div style={{ flex: 1 }} onClick={() => setIsMobileMenuOpen(false)}></div>
+        </div>
+      )}
     </header>
   );
 }

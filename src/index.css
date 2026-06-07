@@ -399,9 +399,23 @@ textarea.form-control {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: var(--spacing-2xl);
   margin-bottom: var(--spacing-xl);
+}
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+  }
+}
+
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
 }
 
 .footer-about h3 {
@@ -442,6 +456,13 @@ textarea.form-control {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: var(--spacing-md);
+}
+
+@media (max-width: 480px) {
+  .asset-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-xs);
+  }
 }
 
 .asset-card {
@@ -548,6 +569,26 @@ textarea.form-control {
   font-size: 13px;
   color: var(--color-text-muted);
   font-weight: 400;
+}
+
+@media (max-width: 480px) {
+  .card-content {
+    padding: var(--spacing-xs);
+  }
+  .card-title {
+    font-size: 12px;
+    height: 32px;
+    line-height: 1.35;
+  }
+  .card-price {
+    font-size: 14px;
+  }
+  .card-price span {
+    font-size: 11px;
+  }
+  .card-meta {
+    font-size: 11px;
+  }
 }
 
 /* Modals */

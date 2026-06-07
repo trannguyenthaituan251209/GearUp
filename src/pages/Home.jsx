@@ -26,6 +26,7 @@ import {
   Heart,
   Star
 } from 'lucide-react';
+import LogoLoop from '../components/LogoLoop';
 
 const CATEGORIES = [
   { value: 'canon_cam', label: 'Máy ảnh Canon' },
@@ -86,7 +87,7 @@ const StackBanner = ({ banner, setCurrentPage }) => {
   
   if (images.length <= 1 || banner.effect !== 'stack-by-stack') {
     return (
-      <section className="container" style={{ marginBottom: '60px' }}>
+      <section className="container horizontal-banner-section" style={{ marginBottom: '60px' }}>
         <div className="horizontal-banner" style={{ borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e2e8f0', width: '100%' }} onClick={() => banner.linkUrl && setCurrentPage(banner.linkUrl)}>
           <img src={images[0]} alt={banner.title || "Banner"} style={{ width: '100%', height: 'auto', display: 'block' }} />
         </div>
@@ -95,7 +96,7 @@ const StackBanner = ({ banner, setCurrentPage }) => {
   }
 
   return (
-    <section className="container" style={{ marginBottom: '60px' }}>
+    <section className="container horizontal-banner-section" style={{ marginBottom: '60px' }}>
       <div 
         className="stack-banner" 
         style={{ 
@@ -410,12 +411,12 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
     <div className="home-page">
       <style>{`
         .june-promo-banner {
-          background-image: url(https://imgh.in/host/a5cx74);
+          background-image: url(https://imgh.in/host/p7yzsk);
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
           border-radius: var(--radius-lg);
-          padding: 240px 24px 48px 24px;
+          padding: 40px 24px;
           border: 1px solid var(--color-border);
           display: flex;
           flex-direction: column;
@@ -437,40 +438,55 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
         .june-promo-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 8px;
+          gap: 12px;
           width: 100%;
           max-width: 820px;
           margin: 0 auto;
           position: relative;
           z-index: 1;
         }
+        .flash-sale-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 12px;
+          width: 100%;
+        }
         @media (max-width: 1100px) {
-          .june-promo-banner {
-            padding-top: 200px;
-          }
           .june-promo-grid {
             max-width: 680px;
           }
         }
         @media (max-width: 768px) {
-          .june-promo-banner {
-            padding-top: 160px;
-            background-size: cover;
+          .june-promo-grid, .flash-sale-grid {
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 12px;
+            scrollbar-width: none;
           }
-          .june-promo-grid {
-            grid-template-columns: repeat(2, 1fr);
-            max-width: 440px;
+          .june-promo-grid::-webkit-scrollbar, .flash-sale-grid::-webkit-scrollbar {
+            display: none;
+          }
+          .june-promo-grid > div {
+            flex: 0 0 140px;
+            scroll-snap-align: start;
+          }
+          .flash-sale-grid > div {
+            flex: 0 0 160px;
+            scroll-snap-align: start;
+          }
+          .june-promo-banner {
+            padding-top: 140px;
+            padding-bottom: 30px;
+            background-size: cover;
           }
         }
         @media (max-width: 480px) {
-          .june-promo-banner {
-            padding-top: 140px;
-            background-image: url(https://imgh.in/host/5qlau9);
-            background-size: cover;
+          .june-promo-grid > div {
+            flex: 0 0 135px;
           }
-          .june-promo-grid {
-            grid-template-columns: repeat(2, 1fr);
-            max-width: 380px;
+          .flash-sale-grid > div {
+            flex: 0 0 150px; /* Wider to fit all Flash Sale details */
           }
         }
         @media (max-width: 1150px) {
@@ -478,6 +494,45 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             display: none !important;
           }
         }
+
+        /* Hero Layout Responsiveness */
+        .home-hero-layout {
+          display: grid;
+          grid-template-columns: 260px 1fr 240px;
+          gap: 24px;
+          align-items: stretch;
+        }
+        @media (max-width: 1100px) {
+          .home-hero-layout {
+            grid-template-columns: 220px 1fr;
+          }
+          .hero-vertical-banners {
+            display: none !important; /* Hide right banners on tablet to save space */
+          }
+        }
+        @media (max-width: 768px) {
+          .home-hero-layout {
+            grid-template-columns: 1fr;
+          }
+          .category-sidebar {
+            display: none !important; /* Hide sidebar on mobile */
+          }
+          .hero-vertical-banners {
+            display: none !important; /* Hide right banners on mobile due to aspect ratio issues */
+          }
+          .horizontal-banner-section {
+            display: none !important; /* Hide wide banners on mobile */
+          }
+          .mobile-newbie-promo {
+            display: block !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .hero-vertical-banners {
+            display: none !important; 
+          }
+        }
+
         .skeleton {
           background: #e2e8f0;
           background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
@@ -494,8 +549,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
       {isAppLoading ? (
         <div style={{ width: '100%', minHeight: '80vh', padding: '30px 0' }}>
           <section className="container" style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 240px', gap: '24px', alignItems: 'stretch' }} className="home-hero-layout">
-              <aside className="skeleton" style={{ height: '480px' }}></aside>
+            <div className="home-hero-layout">
+              <aside className="skeleton category-sidebar" style={{ height: '480px' }}></aside>
               <div className="skeleton" style={{ height: '480px' }}></div>
               <div className="hero-vertical-banners" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="skeleton" style={{ flex: 1, minHeight: '232px' }}></div>
@@ -515,15 +570,10 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
 
       {/* Top Banner & Category Sidebar (Phong Vu Demo Style) */}
       <section className="container" style={{ paddingTop: '30px', marginBottom: '40px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '260px 1fr 240px',
-          gap: '24px',
-          alignItems: 'stretch'
-        }} className="home-hero-layout">
+        <div className="home-hero-layout">
           
           {/* Left Column - Category Sidebar List */}
-          <aside className="glass-panel" style={{
+          <aside className="glass-panel category-sidebar" style={{
             backgroundColor: '#ffffff',
             borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--color-border)',
@@ -683,22 +733,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
               <ChevronRight size={24} />
             </button>
 
-            {/* Slider Dots */}
-            <div style={{
-              position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', gap: '8px', zIndex: 3
-            }}>
-              {heroSlides.map((_, idx) => (
-                <div key={idx} onClick={() => setCurrentSlide(idx)} style={{
-                  width: currentSlide === idx ? '24px' : '8px',
-                  height: '8px',
-                  borderRadius: '4px',
-                  backgroundColor: currentSlide === idx ? 'var(--color-primary)' : 'rgba(255,255,255,0.5)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }} />
-              ))}
-            </div>
           </div>
 
           {/* Right Column - 2 Vertical Banners */}
@@ -807,6 +841,36 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
         </div>
       </section>
 
+      {/* Brand Partners Logo Loop */}
+      <section className="container" style={{ marginBottom: '40px' }}>
+        <div style={{ height: '100px', position: 'relative', overflow: 'hidden', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
+          <style>{`
+            .logoloop__item img {
+              filter: brightness(0);
+            }
+          `}</style>
+          <LogoLoop
+            logos={[
+              { src: "https://cdn.simpleicons.org/nikon/000000", alt: "Nikon" },
+              { src: "https://imgh.in/host/ju0aan", alt: "Canon", style: { height: '24px' } },
+              { src: "https://cdn.simpleicons.org/dji/000000", alt: "DJI" },
+              { src: "https://imgh.in/host/xkgcpl", alt: "Ricoh", style: { height: '20px' } },
+              { src: "https://cdn.simpleicons.org/fujifilm/000000", alt: "Fujifilm" },
+              { src: "https://imgh.in/host/g21ch3", alt: "Olympus", style: { height: '20px' } },
+              { src: "https://cdn.simpleicons.org/sony/000000", alt: "Sony" },
+              { src: "https://cdn.simpleicons.org/panasonic/000000", alt: "Panasonic" }
+            ]}
+            speed={80}
+            direction="left"
+            logoHeight={50}
+            gap={80}
+            hoverSpeed={20}
+            fadeOut={true}
+            fadeOutColor="#ffffff"
+          />
+        </div>
+      </section>
+
       {/* Banner Ngang 1 (Dưới Slider) */}
       {homeHorizontal1 && <StackBanner banner={homeHorizontal1} setCurrentPage={setCurrentPage} />}
 
@@ -850,6 +914,31 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
              </svg>
           </div>
+
+          {/* Typography Image (Cropped) */}
+          <div style={{ 
+            position: 'relative', 
+            zIndex: 2, 
+            width: '100%', 
+            maxWidth: '720px',
+            aspectRatio: '2.5 / 1',
+            overflow: 'hidden',
+            margin: '0 auto 32px auto'
+          }}>
+            <img 
+              src="https://imgh.in/host/6i2kvg" 
+              alt="Có gì hot trong tháng 6" 
+              style={{ 
+                width: '100%', 
+                position: 'absolute',
+                top: '50%',
+                left: '0',
+                transform: 'translateY(-50%)',
+                display: 'block' 
+              }} 
+            />
+          </div>
+
           {/* Neobrutalist Countdown Timer */}
           <div style={{
             display: 'flex',
@@ -1082,8 +1171,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                   border: '2px solid #000000',
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
-                  overflow: 'hidden',
-                  padding: '8px'
+                  overflow: 'hidden'
                 }}
                 onClick={() => {
                   setSelectedAssetId(item.id);
@@ -1092,21 +1180,21 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 onMouseOver={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
                 onMouseOut={(e) => e.currentTarget.style.borderColor = '#000000'}
                 >
-                  {/* Centered Image Area */}
+                  {/* Centered Image Area (Edge to Edge) */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     width: '100%',
-                    height: '80px',
-                    marginBottom: '8px',
-                    backgroundColor: '#fff'
+                    height: '110px',
+                    backgroundColor: '#fff',
+                    borderBottom: '1px solid #f1f5f9'
                   }}>
-                    <img src={item.imageUrl} alt={item.title} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                    <img src={item.imageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   
                   {/* Content */}
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'left' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'left', padding: '8px' }}>
                     <h3 style={{
                       fontSize: '11px',
                       fontWeight: '800',
@@ -1281,17 +1369,27 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                   <div key={asset.id} style={{
                     backgroundColor: '#ffffff',
                     borderRadius: '8px',
-                    padding: '12px',
                     display: 'flex',
                     flexDirection: 'column',
-                    position: 'relative'
-                  }}>
+                    position: 'relative',
+                    border: '2px solid #000000',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                    overflow: 'hidden'
+                  }}
+                  onClick={() => {
+                    setSelectedAssetId(asset.id);
+                    setCurrentPage('asset-detail');
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.borderColor = '#ea580c'}
+                  onMouseOut={(e) => e.currentTarget.style.borderColor = '#000000'}
+                  >
                     {/* Discount Badge */}
                     <div style={{
                       position: 'absolute',
-                      top: '12px',
-                      left: '12px',
-                      backgroundColor: '#7c3aed',
+                      top: '8px',
+                      left: '8px',
+                      backgroundColor: '#ea580c',
                       color: '#ffffff',
                       fontSize: '10px',
                       fontWeight: '800',
@@ -1303,19 +1401,20 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                       {asset.discount}
                     </div>
 
-                    {/* Image */}
-                    <div style={{ height: '140px', width: '100%', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={asset.imageUrl} alt={asset.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    {/* Image (Edge to Edge) */}
+                    <div style={{ height: '110px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderBottom: '1px solid #f1f5f9' }}>
+                      <img src={asset.imageUrl} alt={asset.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
 
-                    {/* Brand & Heart */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>{asset.brand}</span>
-                      <Heart size={14} style={{ color: '#3b82f6' }} />
-                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      {/* Brand & Heart */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>{asset.brand}</span>
+                        <Heart size={14} style={{ color: '#3b82f6' }} />
+                      </div>
 
-                    {/* Title */}
-                    <h4 style={{
+                      {/* Title */}
+                      <h4 style={{
                       fontSize: '12px',
                       fontWeight: '600',
                       color: '#333333',
@@ -1384,7 +1483,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                       Thêm vào giỏ
                     </button>
                   </div>
-                ))}
+                </div>
+              ))}
               </div>
             </div>
           </div>
@@ -1474,13 +1574,6 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           .home-hero-layout {
             grid-template-columns: 240px 1fr !important;
           }
-          .hero-vertical-banners {
-            grid-column: 1 / -1;
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            height: auto !important;
-            width: 100% !important;
-          }
         }
         
         @media (max-width: 900px) {
@@ -1490,21 +1583,12 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           .home-hero-layout aside {
             display: none !important;
           }
-          .hero-vertical-banners {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            height: auto !important;
-            width: 100% !important;
-          }
         }
         
         @media (max-width: 768px) {
           .home-horizontal-banners {
             grid-template-columns: 1fr !important;
             gap: 16px !important;
-          }
-          .hero-vertical-banners {
-            grid-template-columns: 1fr !important;
           }
         }
       `}</style>
@@ -1515,6 +1599,42 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
 
       {/* Banner Ngang 3 (Cuối trang, trên Chợ Thiết Bị) */}
       {homeHorizontal3 && <StackBanner banner={homeHorizontal3} setCurrentPage={setCurrentPage} />}
+
+      {/* Mobile Sticky Newbie Promo Button */}
+      <div className="mobile-newbie-promo" style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 50,
+        display: 'none' // hidden by default, shown on mobile via CSS
+      }}>
+        <div 
+          onClick={() => setCurrentPage('promo/welcome')}
+          style={{
+            backgroundColor: '#ef4444',
+            color: 'white',
+            padding: '12px 20px',
+            borderRadius: '30px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: '800',
+            fontSize: '14px',
+            cursor: 'pointer',
+            animation: 'bounce 2s infinite'
+          }}
+        >
+          <span style={{ fontSize: '20px', lineHeight: 1 }}>🎁</span>
+          QUÀ TÂN THỦ
+        </div>
+      </div>
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+      `}</style>
 
       <section className="container" id="market-section" style={{ paddingTop: '40px', marginBottom: '60px' }}>
         <div style={{ marginBottom: '30px' }}>
