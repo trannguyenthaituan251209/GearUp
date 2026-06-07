@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StoreProvider } from './context/StoreContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -25,13 +25,29 @@ function MainAppContent() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedAssetId, setSelectedAssetId] = useState(null);
   
-  // Shared filters so they transfer when searching from the Home page hero
   const [filters, setFilters] = useState({
     search: '',
     category: '',
     location: '',
     priceRange: 1000000
   });
+
+  useEffect(() => {
+    let faviconUrl = 'https://imgh.in/host/tq3swf'; // Default / Home
+    if (isAdminPortal) {
+      faviconUrl = 'https://imgh.in/host/q7l877'; // SSO / Admin
+    } else if (isPartnerPortal) {
+      faviconUrl = 'https://imgh.in/host/j7ws9k'; // Partner
+    }
+
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    link.href = faviconUrl;
+  }, [isAdminPortal, isPartnerPortal]);
 
   const renderPage = () => {
     switch (currentPage) {
