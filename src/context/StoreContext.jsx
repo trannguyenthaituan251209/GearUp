@@ -332,13 +332,18 @@ export const StoreProvider = ({ children }) => {
           });
         }
         // Also update in profiles table on database
-        await supabase.from('profiles').update({
+        const { error: updateError } = await supabase.from('profiles').update({
           phone,
           citizen_id: citizenId,
           studio_name: studioName || `${user.name} Studio`,
-          is_partner: false
+          is_partner: false,
+          partner_status: 'pending'
         }).eq('id', user.id);
-        console.log('[Supabase Profiles] Successfully updated partner status to pending in DB');
+        if (updateError) {
+          console.warn('[Supabase Profiles] Error setting pending status in DB:', updateError);
+        } else {
+          console.log('[Supabase Profiles] Successfully updated partner status to pending in DB');
+        }
       }
       
       setUser(updatedUser);
@@ -353,12 +358,18 @@ export const StoreProvider = ({ children }) => {
     // Real Supabase update
     if (userId && !userId.startsWith('user-')) {
       try {
-        await supabase.from('profiles').update({
-          is_partner: true
+        const { error } = await supabase.from('profiles').update({
+          is_partner: true,
+          partner_status: 'approved'
         }).eq('id', userId);
+        if (error) {
+          console.warn('[Supabase Profiles] Failed to approve partner in DB:', error);
+          return { error };
+        }
         console.log('[Supabase Profiles] Approved partner in database:', userId);
       } catch (err) {
-        console.warn('[Supabase Profiles] Failed to approve partner in DB:', err);
+        console.warn('[Supabase Profiles] Exception in DB approve:', err);
+        return { error: err };
       }
     }
 
@@ -379,12 +390,18 @@ export const StoreProvider = ({ children }) => {
     // Real Supabase update
     if (userId && !userId.startsWith('user-')) {
       try {
-        await supabase.from('profiles').update({
-          is_partner: false
+        const { error } = await supabase.from('profiles').update({
+          is_partner: false,
+          partner_status: 'rejected'
         }).eq('id', userId);
+        if (error) {
+          console.warn('[Supabase Profiles] Failed to reject partner in DB:', error);
+          return { error };
+        }
         console.log('[Supabase Profiles] Rejected partner in database:', userId);
       } catch (err) {
-        console.warn('[Supabase Profiles] Failed to reject partner in DB:', err);
+        console.warn('[Supabase Profiles] Exception in DB reject:', err);
+        return { error: err };
       }
     }
 

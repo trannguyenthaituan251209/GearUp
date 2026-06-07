@@ -22,7 +22,9 @@ import {
   Award,
   Truck,
   ShoppingCart,
-  Wifi
+  Wifi,
+  Heart,
+  Star
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -63,6 +65,102 @@ const SkeletonCard = () => (
 
 export default function Home({ setCurrentPage, setSelectedAssetId, filters, setFilters }) {
   const { assets, user, setShowAuthModal, setShowPartnerModal } = useContext(StoreContext);
+  const [flashSaleTab, setFlashSaleTab] = useState('Nikon');
+
+  const MOCK_FLASH_SALE_ASSETS = [
+    {
+      id: 'mock-n1', brand: 'Nikon',
+      title: 'Máy Ảnh Nikon Z9 Body Chính Hãng (Quay 8K)',
+      imageUrl: 'https://images.unsplash.com/photo-1617005082833-1eb585703f4c?w=400&q=80',
+      pricePerDay: 1500000, oldPrice: 1800000, discount: 'Tiết kiệm 300.000 đ', rating: 4.9
+    },
+    {
+      id: 'mock-n2', brand: 'Nikon',
+      title: 'Nikon Z8 Body - Thiết Kế Nhỏ Gọn Sức Mạnh Khủng',
+      imageUrl: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&q=80',
+      pricePerDay: 1200000, oldPrice: 1500000, discount: 'Tiết kiệm 300.000 đ', rating: 4.8
+    },
+    {
+      id: 'mock-n3', brand: 'Nikon',
+      title: 'Máy Ảnh Nikon Z7 II (Z7 2) Body Cũ Đẹp',
+      imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&q=80',
+      pricePerDay: 800000, oldPrice: 950000, discount: 'Tiết kiệm 150.000 đ', rating: 4.7
+    },
+    {
+      id: 'mock-n4', brand: 'Nikon',
+      title: 'Ống Kính Nikon NIKKOR Z 24-70mm f/2.8 S',
+      imageUrl: 'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?w=400&q=80',
+      pricePerDay: 500000, oldPrice: 650000, discount: 'Tiết kiệm 150.000 đ', rating: 4.9
+    },
+    {
+      id: 'mock-n5', brand: 'Nikon',
+      title: 'Nikon Zfc Kit 16-50mm f/3.5-6.3 VR Phong Cách Retro',
+      imageUrl: 'https://images.unsplash.com/photo-1542567455-cd733f23fbb1?w=400&q=80',
+      pricePerDay: 400000, oldPrice: 500000, discount: 'Tiết kiệm 100.000 đ', rating: 4.8
+    },
+    {
+      id: 'mock-c1', brand: 'Canon',
+      title: 'Máy Ảnh Canon EOS R5 Body - Đỉnh Cao Quay Chụp',
+      imageUrl: 'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=400&q=80',
+      pricePerDay: 1400000, oldPrice: 1700000, discount: 'Tiết kiệm 300.000 đ', rating: 5.0
+    },
+    {
+      id: 'mock-c2', brand: 'Canon',
+      title: 'Máy Ảnh Canon EOS R6 Mark II Tốc Độ Siêu Nhanh',
+      imageUrl: 'https://images.unsplash.com/photo-1500634245200-e5245c7574ef?w=400&q=80',
+      pricePerDay: 1000000, oldPrice: 1200000, discount: 'Tiết kiệm 200.000 đ', rating: 4.9
+    },
+    {
+      id: 'mock-c3', brand: 'Canon',
+      title: 'Canon EOS RP Kèm Lens 24-105mm Dành Cho Người Mới',
+      imageUrl: 'https://images.unsplash.com/photo-1519638831568-d9897f54ed69?w=400&q=80',
+      pricePerDay: 450000, oldPrice: 600000, discount: 'Tiết kiệm 150.000 đ', rating: 4.6
+    },
+    {
+      id: 'mock-c4', brand: 'Canon',
+      title: 'Ống Kính Canon RF 70-200mm f/2.8L IS USM',
+      imageUrl: 'https://images.unsplash.com/photo-1621287955546-276f62ea129e?w=400&q=80',
+      pricePerDay: 600000, oldPrice: 800000, discount: 'Tiết kiệm 200.000 đ', rating: 4.9
+    },
+    {
+      id: 'mock-c5', brand: 'Canon',
+      title: 'Canon EOS R50 Cực Kỳ Nhỏ Gọn Dành Cho Vlogger',
+      imageUrl: 'https://images.unsplash.com/photo-1560599181-424a56a6a978?w=400&q=80',
+      pricePerDay: 300000, oldPrice: 400000, discount: 'Tiết kiệm 100.000 đ', rating: 4.7
+    },
+    {
+      id: 'mock-f1', brand: 'Fujifilm',
+      title: 'Máy Ảnh Fujifilm X-T5 Cảm Biến 40MP Đỉnh Cao',
+      imageUrl: 'https://images.unsplash.com/photo-1566807810034-cb5fa887754b?w=400&q=80',
+      pricePerDay: 600000, oldPrice: 750000, discount: 'Tiết kiệm 150.000 đ', rating: 4.9
+    },
+    {
+      id: 'mock-f2', brand: 'Fujifilm',
+      title: 'Fujifilm X100V Bạc Xịn Xò Chụp Đường Phố',
+      imageUrl: 'https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=400&q=80',
+      pricePerDay: 800000, oldPrice: 1000000, discount: 'Tiết kiệm 200.000 đ', rating: 5.0
+    },
+    {
+      id: 'mock-f3', brand: 'Fujifilm',
+      title: 'Máy Ảnh Fujifilm X-H2S Quay Phim Chuyên Nghiệp',
+      imageUrl: 'https://images.unsplash.com/photo-1587841517743-f8f4842b1016?w=400&q=80',
+      pricePerDay: 900000, oldPrice: 1100000, discount: 'Tiết kiệm 200.000 đ', rating: 4.8
+    },
+    {
+      id: 'mock-f4', brand: 'Fujifilm',
+      title: 'Ống Kính Fujinon XF 33mm f/1.4 R LM WR',
+      imageUrl: 'https://images.unsplash.com/photo-1498028045864-4e782ca7099b?w=400&q=80',
+      pricePerDay: 250000, oldPrice: 350000, discount: 'Tiết kiệm 100.000 đ', rating: 4.8
+    },
+    {
+      id: 'mock-f5', brand: 'Fujifilm',
+      title: 'Fujifilm X-T30 II Kèm Lens 15-45mm Gọn Nhẹ',
+      imageUrl: 'https://images.unsplash.com/photo-1586221199587-b95c3b49cbb6?w=400&q=80',
+      pricePerDay: 350000, oldPrice: 450000, discount: 'Tiết kiệm 100.000 đ', rating: 4.7
+    }
+  ];
+
+  const currentFlashSaleAssets = MOCK_FLASH_SALE_ASSETS.filter(a => a.brand === flashSaleTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
 
@@ -241,8 +339,8 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
       <style>{`
         .june-promo-banner {
           background-image: url(https://imgh.in/host/a5cx74);
-          background-size: 100% 100%;
-          background-position: top center;
+          background-size: cover;
+          background-position: center;
           background-repeat: no-repeat;
           border-radius: var(--radius-lg);
           padding: 240px 24px 48px 24px;
@@ -285,7 +383,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
         @media (max-width: 768px) {
           .june-promo-banner {
             padding-top: 160px;
-            background-size: 100% 100%;
+            background-size: cover;
           }
           .june-promo-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -296,7 +394,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           .june-promo-banner {
             padding-top: 140px;
             background-image: url(https://imgh.in/host/5qlau9);
-            background-size: 100% 100%;
+            background-size: cover;
           }
           .june-promo-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -945,6 +1043,306 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
             })}
           </div>
         </div>
+
+        {/* Banner ngang hẹp mới */}
+        <div style={{ marginTop: '20px', width: '100%', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+          <img src="https://imgh.in/host/55jqs5" alt="Banner Ngang" style={{ width: '100%', height: 'auto', display: 'block' }} />
+        </div>
+      </section>
+
+      {/* FLASH SALE ONLINE SECTION */}
+      <section className="container" style={{ marginBottom: '60px' }}>
+        <div className="flash-sale-wrapper" style={{
+          backgroundColor: '#fff',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          border: '1px solid var(--color-border)',
+        }}>
+          {/* Tabs Navigation */}
+          <div style={{
+            display: 'flex',
+            backgroundColor: '#ffffff',
+            overflowX: 'auto'
+          }}>
+            {[
+              { id: 'Nikon', title: 'Nikon', subtitle: 'Giảm Đến 20%' },
+              { id: 'Canon', title: 'Canon', subtitle: 'Giảm Đến 25%' },
+              { id: 'Fujifilm', title: 'Fujifilm', subtitle: 'Giảm Sốc 30%' },
+            ].map(tab => {
+              const isActive = flashSaleTab === tab.id;
+              return (
+                <div 
+                  key={tab.id}
+                  onClick={() => setFlashSaleTab(tab.id)}
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    padding: '16px 8px',
+                    cursor: 'pointer',
+                    backgroundColor: isActive ? '#ea580c' : '#ffffff',
+                    backgroundImage: isActive ? 'radial-gradient(#fdba74 15%, transparent 16%), radial-gradient(#fdba74 15%, transparent 16%)' : 'none',
+                    backgroundSize: '20px 20px',
+                    backgroundPosition: '0 0, 10px 10px',
+                    color: isActive ? '#ffffff' : '#333333',
+                    minWidth: '150px',
+                    borderRight: '1px solid var(--color-border)',
+                    borderBottom: isActive ? 'none' : '1px solid var(--color-border)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <h3 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '800', 
+                    margin: '0 0 4px', 
+                    color: isActive ? '#ffffff' : '#333333',
+                    textShadow: isActive ? '1px 1px 2px rgba(0,0,0,0.2)' : 'none' 
+                  }}>
+                    {tab.title}
+                  </h3>
+                  <p style={{ 
+                    fontSize: '12px', 
+                    margin: 0, 
+                    fontWeight: isActive ? '600' : '500', 
+                    color: isActive ? 'rgba(255,255,255,0.9)' : 'var(--color-text-muted)' 
+                  }}>
+                    {tab.subtitle}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Main Content Area */}
+          <div style={{
+            display: 'flex',
+            backgroundColor: '#ea580c', // Dark orange base
+            backgroundImage: 'radial-gradient(#fdba74 15%, transparent 16%), radial-gradient(#fdba74 15%, transparent 16%)',
+            backgroundSize: '20px 20px',
+            backgroundPosition: '0 0, 10px 10px',
+            padding: '24px',
+            gap: '24px',
+          }} className="flash-sale-content">
+            
+            {/* Left Sidebar */}
+            <div style={{
+              width: '240px',
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '20px 12px',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+            }} className="flash-sale-sidebar">
+              
+              <h2 style={{
+                color: '#ffffff',
+                textShadow: '2px 2px 0px #ea580c',
+                fontSize: '32px',
+                fontWeight: '900',
+                textAlign: 'center',
+                fontStyle: 'italic',
+                lineHeight: 1.1,
+                marginBottom: '32px'
+              }}>
+                FLASH SALE<br/>ONLINE
+              </h2>
+
+              <p style={{ color: '#ffffff', fontWeight: '600', marginBottom: '12px', fontSize: '14px', textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>Kết thúc sau <span style={{fontWeight: '800'}}>2</span> ngày</p>
+              
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
+                <div style={{ backgroundColor: '#1e293b', color: '#fff', fontSize: '20px', fontWeight: '700', padding: '8px 12px', borderRadius: '6px' }}>14</div>
+                <div style={{ backgroundColor: '#1e293b', color: '#fff', fontSize: '20px', fontWeight: '700', padding: '8px 12px', borderRadius: '6px' }}>06</div>
+                <div style={{ backgroundColor: '#1e293b', color: '#fff', fontSize: '20px', fontWeight: '700', padding: '8px 12px', borderRadius: '6px' }}>40</div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#ea580c',
+                color: '#ffffff',
+                padding: '12px 20px',
+                borderRadius: '30px',
+                fontWeight: '800',
+                textAlign: 'center',
+                width: '100%',
+                boxShadow: '0 4px 10px rgba(234, 88, 12, 0.4)'
+              }}>
+                <span style={{ display: 'block', fontSize: '12px', opacity: 0.9, marginBottom: '2px' }}>Số lượng có hạn</span>
+                MUA NGAY KẺO HẾT!!!
+              </div>
+            </div>
+
+            {/* Right Product Grid Container */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px' }}>
+                <span style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px', textShadow: '1px 1px 1px rgba(0,0,0,0.1)' }}>*Giới hạn 01 sản phẩm/ 1 khách hàng trong chương trình</span>
+                <span style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}>Xem tất cả &gt;</span>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                gap: '12px',
+                overflowX: 'auto',
+                paddingBottom: '8px'
+              }} className="flash-sale-grid">
+                {currentFlashSaleAssets.map((asset) => (
+                  <div key={asset.id} style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                  }}>
+                    {/* Discount Badge */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      backgroundColor: '#7c3aed',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      zIndex: 2,
+                      boxShadow: '2px 2px 0px rgba(0,0,0,0.1)'
+                    }}>
+                      {asset.discount}
+                    </div>
+
+                    {/* Image */}
+                    <div style={{ height: '140px', width: '100%', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={asset.imageUrl} alt={asset.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
+
+                    {/* Brand & Heart */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>{asset.brand}</span>
+                      <Heart size={14} style={{ color: '#3b82f6' }} />
+                    </div>
+
+                    {/* Title */}
+                    <h4 style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#333333',
+                      marginBottom: '8px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      height: '36px'
+                    }}>
+                      {asset.title}
+                    </h4>
+
+                    {/* Combo Badge */}
+                    <div style={{
+                      display: 'inline-block',
+                      border: '1px solid #3b82f6',
+                      color: '#3b82f6',
+                      fontSize: '9px',
+                      fontWeight: '700',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      marginBottom: '8px',
+                      alignSelf: 'flex-start'
+                    }}>
+                      COMBO GIẢM ~ 50.000 đ
+                    </div>
+
+                    {/* Prices */}
+                    <div style={{ marginTop: 'auto', marginBottom: '12px' }}>
+                      <div style={{ color: '#2563eb', fontSize: '18px', fontWeight: '800', marginBottom: '2px' }}>
+                        {formatPrice(asset.pricePerDay)} đ
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
+                          {formatPrice(asset.oldPrice)} đ
+                        </span>
+                        <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '700' }}>
+                          -{Math.round((asset.oldPrice - asset.pricePerDay) / asset.oldPrice * 100)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Rating */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+                      <Star size={12} fill="#fbbf24" color="#fbbf24" />
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#475569' }}>{asset.rating}</span>
+                    </div>
+
+                    {/* Add to Cart Button */}
+                    <button style={{
+                      width: '100%',
+                      backgroundColor: 'transparent',
+                      border: '1px solid #2563eb',
+                      color: '#2563eb',
+                      padding: '8px 0',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#2563eb'; e.currentTarget.style.color = '#ffffff'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#2563eb'; }}
+                    >
+                      Thêm vào giỏ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CSS Overrides for Responsive Flash Sale Grid */}
+        <style>{`
+          @media (max-width: 1200px) {
+            .flash-sale-grid {
+              grid-template-columns: repeat(4, 1fr) !important;
+            }
+          }
+          @media (max-width: 900px) {
+            .flash-sale-content {
+              flex-direction: column !important;
+            }
+            .flash-sale-sidebar {
+              width: 100% !important;
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              padding: 16px !important;
+            }
+            .flash-sale-sidebar h2 {
+              font-size: 24px !important;
+              margin-bottom: 0 !important;
+              text-align: left !important;
+            }
+            .flash-sale-grid {
+              grid-template-columns: repeat(3, 1fr) !important;
+            }
+          }
+          @media (max-width: 768px) {
+            .flash-sale-grid {
+              grid-template-columns: repeat(2, 1fr) !important;
+            }
+            .flash-sale-sidebar {
+              flex-direction: column !important;
+              align-items: center !important;
+              text-align: center !important;
+            }
+            .flash-sale-sidebar h2 {
+              text-align: center !important;
+              margin-bottom: 16px !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .flash-sale-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
       </section>
 
 

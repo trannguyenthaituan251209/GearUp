@@ -61,7 +61,9 @@ export default function PlatformDashboard() {
               email: displayEmail,
               avatar: p.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
               isPartner: p.is_partner || false,
-              partnerStatus: p.is_partner ? 'approved' : (p.phone && p.citizen_id ? 'pending' : null),
+              partnerStatus: (p.partner_status && p.partner_status !== 'NULL' && p.partner_status !== 'null') 
+                              ? p.partner_status 
+                              : (p.is_partner ? 'approved' : (p.phone && p.citizen_id ? 'pending' : null)),
               phone: p.phone || '',
               citizenId: p.citizen_id || '',
               studioName: p.studio_name || '',
@@ -111,14 +113,22 @@ export default function PlatformDashboard() {
   };
 
   const handleApproveStore = async (userId) => {
-    await approvePartner(userId);
-    alert('Đã phê duyệt hồ sơ đối tác! Cửa hàng đã được kích hoạt hoạt động.');
+    const result = await approvePartner(userId);
+    if (result && result.error) {
+      alert('Lỗi phê duyệt (có thể do phân quyền Supabase RLS): ' + result.error.message);
+    } else {
+      alert('Đã phê duyệt hồ sơ đối tác! Cửa hàng đã được kích hoạt hoạt động.');
+    }
     fetchUsers();
   };
 
   const handleRejectStore = async (userId) => {
-    await rejectPartner(userId);
-    alert('Đã từ chối hồ sơ đối tác.');
+    const result = await rejectPartner(userId);
+    if (result && result.error) {
+      alert('Lỗi từ chối (có thể do phân quyền Supabase RLS): ' + result.error.message);
+    } else {
+      alert('Đã từ chối hồ sơ đối tác.');
+    }
     fetchUsers();
   };
 

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText } from 'lucide-react';
+import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText, Bell, ShoppingCart } from 'lucide-react';
 
 export default function Header({ currentPage, setCurrentPage }) {
   const {
@@ -97,7 +97,18 @@ export default function Header({ currentPage, setCurrentPage }) {
               </a>
             )}
 
-            {(!user || !user.isPartner) && (
+            {user && user.isPartner ? (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = getPartnerUrl();
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Briefcase size={14} /> Đến trang cửa hàng
+              </a>
+            ) : (
               <a
                 href="#"
                 onClick={(e) => {
@@ -160,7 +171,19 @@ export default function Header({ currentPage, setCurrentPage }) {
         </div>
 
         {/* Actions */}
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Icons: Notification and Cart */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderRight: '1px solid var(--color-border)', paddingRight: '16px' }}>
+            <div style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}>
+              <Bell size={22} />
+              <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>3</span>
+            </div>
+            <div style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}>
+              <ShoppingCart size={22} />
+              <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>1</span>
+            </div>
+          </div>
+
           {!user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', border: '1.5px solid var(--color-text-muted)', color: 'var(--color-text-muted)' }}>
