@@ -8,7 +8,8 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
   const [pricePerDay, setPricePerDay] = useState('');
   const [description, setDescription] = useState('');
   const [specsText, setSpecsText] = useState('');
-  const [imageSelect, setImageSelect] = useState('/camera.png');
+  const [imageSelect, setImageSelect] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [mount, setMount] = useState('');
   const [cameraType, setCameraType] = useState('');
   const [sensorType, setSensorType] = useState('');
@@ -27,6 +28,36 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
       setSensorType(asset.sensorType || '');
     }
   }, [asset]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('https://api.imgh.in/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'sk_live_9mprbxu7g1vv5abjjmgmb'
+        },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const fullUrl = data.url.startsWith('http') ? data.url : 'https://' + data.url;
+        setImageSelect(fullUrl);
+      } else {
+        alert('Upload thất bại: ' + (data.error || 'Lỗi không xác định'));
+      }
+    } catch (err) {
+      alert('Lỗi upload: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -119,13 +150,13 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
             </div>
 
             <div className="form-group">
-              <label>Hình ảnh mô phỏng</label>
-              <select className="form-control" value={imageSelect} onChange={(e) => setImageSelect(e.target.value)}>
-                <option value="/camera.png">Mẫu Máy ảnh (Camera)</option>
-                <option value="/flycam.png">Mẫu Flycam (Drone)</option>
-                <option value="/gimbal.png">Mẫu Gimbal (Stabilizer)</option>
-                <option value="/light.png">Mẫu Đèn Studio (LED Light)</option>
-              </select>
+              <label>Hình ảnh thiết bị {isUploading && <span style={{fontSize:'12px', color:'var(--color-primary)', marginLeft:'8px'}}>(Đang tải lên...)</span>}</label>
+              <input type="file" accept="image/*" className="form-control" onChange={handleImageUpload} disabled={isUploading} />
+              {imageSelect && (
+                <div style={{marginTop: '10px', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)'}}>
+                  <img src={imageSelect} alt="Preview" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                </div>
+              )}
             </div>
           </div>
 

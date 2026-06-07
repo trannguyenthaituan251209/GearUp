@@ -1,771 +1,675 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useMemo } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
 import { 
-  Folder, 
-  Bell, 
-  Plus, 
-  DollarSign, 
-  Camera, 
-  Users, 
-  TrendingUp, 
-  Eye, 
-  EyeOff, 
-  Check, 
-  X, 
-  CheckCircle,
-  FileText,
-  MapPin,
-  Calendar,
-  Edit3
+  LayoutDashboard, 
+  Package, 
+  ShoppingCart, 
+  Wallet, 
+  PlusCircle, 
+  ChevronLeft, 
+  ChevronRight,
+  TrendingUp,
+  DollarSign,
+  Camera,
+  Users,
+  Eye,
+  EyeOff,
+  Edit3,
+  Check,
+  X,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import AssetEditModal from '../components/AssetEditModal';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
   const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails } = useContext(StoreContext);
   
-  // Tab navigation: 'overview' | 'listings' | 'requests' | 'add-new'
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // New Asset Form State
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('sony_cam');
-  const [location, setLocation] = useState('TP. Hồ Chí Minh');
-  const [pricePerDay, setPricePerDay] = useState('');
-  const [description, setDescription] = useState('');
-  const [specsText, setSpecsText] = useState('');
-  const [imageSelect, setImageSelect] = useState('/camera.png');
-  const [mount, setMount] = useState('');
-  const [cameraType, setCameraType] = useState('');
-  const [sensorType, setSensorType] = useState('');
-
-  // Editing Asset State
-  const [editingAsset, setEditingAsset] = useState(null);
-
-  // Filter assets owned by this partner (fallback to 'Nguyễn Minh Quân' for demo context)
-  const myAssets = assets.filter(a => 
+  // --- Data Calculations ---
+  const myAssets = useMemo(() => assets.filter(a => 
     a.ownerId === user?.id || 
     (user?.id === 'demo-user-id' && a.ownerName === 'Nguyễn Minh Quân')
-  );
+  ), [assets, user]);
   
-  const myAssetIds = myAssets.map(a => a.id);
+  const myAssetIds = useMemo(() => myAssets.map(a => a.id), [myAssets]);
 
-  // Filter bookings related to this partner's assets
-  const myBookings = bookings.filter(b => myAssetIds.includes(b.assetId));
+  const myBookings = useMemo(() => bookings.filter(b => myAssetIds.includes(b.assetId)), [bookings, myAssetIds]);
 
-  // Partner specific statistics
-  const totalRevenue = myBookings
+  const totalGrossRevenue = useMemo(() => myBookings
     .filter(b => ['approved', 'returned'].includes(b.status))
-    .reduce((acc, curr) => acc + curr.totalPrice, 0);
+    .reduce((acc, curr) => acc + curr.totalPrice, 0), [myBookings]);
+
+  // PLATFORM FEE LOGIC: 10%
+  const PLATFORM_FEE_PERCENTAGE = 0.10;
+  const platformFee = totalGrossRevenue * PLATFORM_FEE_PERCENTAGE;
+  const netRevenue = totalGrossRevenue - platformFee;
 
   const activeAssetsCount = myAssets.filter(a => a.status === 'available').length;
   const pausedAssetsCount = myAssets.filter(a => a.status === 'paused').length;
   const pendingRequestsCount = myBookings.filter(b => b.status === 'pending').length;
 
-  // Mock list of regular customers (Thống kê khách hàng)
-  const uniqueCustomers = [];
-  const seenRenterNames = new Set();
-  myBookings.forEach(b => {
-    if (!seenRenterNames.has(b.renterName)) {
-      seenRenterNames.add(b.renterName);
-      uniqueCustomers.push({
-        name: b.renterName,
-        contact: b.renterContact,
-        totalSpent: b.totalPrice,
-        rentalsCount: 1
-      });
-    } else {
-      const existing = uniqueCustomers.find(c => c.name === b.renterName);
-      if (existing) {
-        existing.totalSpent += b.totalPrice;
-        existing.rentalsCount += 1;
-      }
-    }
-  });
-
-  // Mock monthly revenue data for SVG Chart rendering (Phân tích dữ liệu)
-  const monthlyRevenue = [
-    { label: 'Tháng 12', val: 3200000 },
-    { label: 'Tháng 1', val: 4500000 },
-    { label: 'Tháng 2', val: 5100000 },
-    { label: 'Tháng 3', val: 4200000 },
-    { label: 'Tháng 4', val: 6800000 },
-    { label: 'Tháng 5', val: totalRevenue || 7500000 }
+  // Mock monthly revenue data for Chart
+  const monthlyRevenueData = [
+    { name: 'Tháng 12', Doanh_Thu: 3200000 },
+    { name: 'Tháng 1', Doanh_Thu: 4500000 },
+    { name: 'Tháng 2', Doanh_Thu: 5100000 },
+    { name: 'Tháng 3', Doanh_Thu: 4200000 },
+    { name: 'Tháng 4', Doanh_Thu: 6800000 },
+    { name: 'Tháng 5', Doanh_Thu: totalGrossRevenue || 7500000 }
   ];
 
-  const maxVal = Math.max(...monthlyRevenue.map(d => d.val));
+  // Mock Asset Performance
+  const assetPerformanceData = myAssets.slice(0, 5).map(a => ({
+    name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title,
+    Luot_Thue: Math.floor(Math.random() * 20) + 1
+  }));
 
-  const handleApproveBooking = (bookingId) => {
-    updateBookingStatus(bookingId, 'approved');
-    alert('Đã phê duyệt yêu cầu thuê của khách hàng!');
+  // --- Shared Styles ---
+  const glassCardStyle = {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '24px',
+    border: '1px solid var(--color-border)',
+    boxShadow: 'none' // User requested no shadow
   };
 
-  const handleRejectBooking = (bookingId) => {
-    updateBookingStatus(bookingId, 'cancelled');
-    alert('Đã từ chối yêu cầu thuê.');
-  };
+  // --- Subcomponents for Tabs ---
 
-  const handleToggleAssetStatus = (assetId, currentStatus) => {
-    const nextStatus = currentStatus === 'paused' ? 'available' : 'paused';
-    updateAssetStatus(assetId, nextStatus);
-    alert(`Đã cập nhật trạng thái thiết bị thành: ${nextStatus === 'available' ? 'Cho thuê' : 'Tạm ngừng cho thuê'}`);
-  };
-
-  const handleSubmitAsset = (e) => {
-    e.preventDefault();
-    if (!title.trim() || !pricePerDay || !description.trim()) {
-      alert('Vui lòng nhập đầy đủ thông tin thiết bị!');
-      return;
-    }
-
-    const specsArray = specsText
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s !== '');
-
-    addAsset({
-      title,
-      category,
-      location,
-      pricePerDay: parseInt(pricePerDay),
-      imageUrl: imageSelect,
-      description,
-      specs: specsArray.length > 0 ? specsArray : ['Hoạt động hoàn hảo', 'Chất lượng cao'],
-      mount,
-      cameraType,
-      sensorType,
-      ownerId: user?.id || 'demo-user-id',
-      ownerName: user?.name || 'Nguyễn Minh Quân'
-    });
-
-    alert('Đăng thiết bị cho thuê mới thành công!');
-    
-    // Reset Form
-    setTitle('');
-    setPricePerDay('');
-    setDescription('');
-    setSpecsText('');
-    setImageSelect('/camera.png');
-    setMount('');
-    setCameraType('');
-    setSensorType('');
-
-    // Redirect
-    setActiveTab('listings');
-  };
-
-  const handleSaveEdit = (updatedData) => {
-    if (editingAsset) {
-      updateAssetDetails(editingAsset.id, updatedData);
-      alert('Đã cập nhật thông tin thiết bị thành công!');
-      setEditingAsset(null);
-    }
-  };
-
-  return (
-    <div className="container" style={{ paddingTop: '40px' }}>
+  const renderOverview = () => (
+    <div className="animate-fade-in">
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Tổng quan hoạt động</h2>
       
-      {/* Title */}
-      <div style={{ marginBottom: '35px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
-            <h1 style={{ fontSize: '32px', margin: 0 }}>Kênh Đối Tác Nền Tảng</h1>
-            <span style={{ 
-              backgroundColor: 'var(--color-primary-light)', 
-              color: 'var(--color-primary)', 
-              fontSize: '12px', 
-              fontWeight: '700', 
-              padding: '4px 12px', 
-              borderRadius: 'var(--radius-full)', 
-              display: 'inline-flex', 
-              alignItems: 'center',
-              gap: '4px',
-              border: '1px solid rgba(0, 102, 255, 0.3)'
-            }} title="Giao diện quản lý subdomain trong tương lai">
-              🌐 partner.example.com
-            </span>
+      {/* Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        <div style={{ ...glassCardStyle, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>Doanh Thu (Net)</span>
+            <DollarSign size={20} color="var(--color-primary)" />
           </div>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Xin chào đối tác <strong style={{ color: 'var(--color-secondary)' }}>{user?.studioName || user?.name || 'Nguyễn Minh Quân'}</strong>.
-            Quản lý doanh thu, duyệt yêu cầu và phân tích dữ liệu cho thuê của bạn.
-          </p>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--color-dark)' }}>{formatPrice(netRevenue)} đ</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px' }}>+12% so với tháng trước</div>
         </div>
-        
-        <button 
-          className="btn btn-lessor"
-          onClick={() => setActiveTab('add-new')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--color-secondary)' }}
-        >
-          <Plus size={16} />
-          <span>Đăng thiết bị mới</span>
+
+        <div style={{ ...glassCardStyle, background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ color: 'var(--color-success)', fontWeight: '600' }}>Lượt Cho Thuê</span>
+            <TrendingUp size={20} color="var(--color-success)" />
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--color-dark)' }}>{myBookings.length}</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px' }}>{pendingRequestsCount} đơn chờ duyệt</div>
+        </div>
+
+        <div style={{ ...glassCardStyle, background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ color: 'var(--color-warning)', fontWeight: '600' }}>Thiết Bị Đang Thuê</span>
+            <Camera size={20} color="var(--color-warning)" />
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--color-dark)' }}>{activeAssetsCount}</div>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '8px' }}>{pausedAssetsCount} thiết bị tạm dừng</div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+        <div style={glassCardStyle}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Tăng trưởng doanh thu</h3>
+          <div style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `${value / 1000000}M`} />
+                <Tooltip formatter={(value) => formatPrice(value) + ' đ'} />
+                <Area type="monotone" dataKey="Doanh_Thu" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div style={glassCardStyle}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Thiết bị được thuê nhiều</h3>
+          <div style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={assetPerformanceData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fontSize: 11, fill: '#64748b' }} />
+                <Tooltip />
+                <Bar dataKey="Luot_Thue" fill="var(--color-secondary)" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const [editingAsset, setEditingAsset] = useState(null);
+
+  const renderListings = () => (
+    <div className="animate-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '800' }}>Quản lý Thiết Bị</h2>
+        <button className="btn btn-primary" onClick={() => setActiveTab('add-new')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <PlusCircle size={18} /> Đăng Thiết Bị Mới
         </button>
       </div>
 
-      {/* Metrics Cards */}
-      <section style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '20px',
-        marginBottom: '40px'
-      }}>
-        {/* Doanh thu */}
-        <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', borderLeft: '5px solid var(--color-success)', boxShadow: 'var(--shadow-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Tổng doanh thu</span>
-            <DollarSign size={20} style={{ color: 'var(--color-success)' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+        {myAssets.length === 0 ? (
+          <div style={{ ...glassCardStyle, gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
+            <Camera size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <p>Bạn chưa đăng thiết bị nào.</p>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-dark)' }}>
-            {formatPrice(totalRevenue)} đ
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-            <TrendingUp size={12} />
-            <span>Tăng trưởng 18% tháng này</span>
-          </div>
-        </div>
-
-        {/* Thiết bị đang cho thuê */}
-        <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', borderLeft: '5px solid var(--color-primary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Thiết bị đang cho thuê</span>
-            <Camera size={20} style={{ color: 'var(--color-primary)' }} />
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-dark)' }}>
-            {activeAssetsCount}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-            {pausedAssetsCount} thiết bị đang ngừng cho thuê
-          </div>
-        </div>
-
-        {/* Khách hàng */}
-        <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', borderLeft: '5px solid var(--color-secondary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Số lượng khách hàng</span>
-            <Users size={20} style={{ color: 'var(--color-secondary)' }} />
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-dark)' }}>
-            {uniqueCustomers.length}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-            Đối tượng sáng tạo nghệ thuật, quay chụp
-          </div>
-        </div>
-
-        {/* Yêu cầu đang chờ */}
-        <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', borderLeft: '5px solid var(--color-warning)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Đơn chờ duyệt</span>
-            <Bell size={20} style={{ color: 'var(--color-warning)' }} />
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-warning)' }}>
-            {pendingRequestsCount}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-            Cần phê duyệt sớm cho khách
-          </div>
-        </div>
-      </section>
-
-      {/* Tabs Menu */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--color-border)',
-        marginBottom: '30px',
-        gap: '24px',
-        overflowX: 'auto'
-      }}>
-        <button 
-          onClick={() => setActiveTab('overview')}
-          style={{
-            background: 'none', border: 'none', padding: '12px 4px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
-            color: activeTab === 'overview' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            borderBottom: activeTab === 'overview' ? '2px solid var(--color-primary)' : '2px solid transparent',
-            display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-          }}
-        >
-          <TrendingUp size={16} />
-          <span>Tổng Quan & Phân Tích</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('listings')}
-          style={{
-            background: 'none', border: 'none', padding: '12px 4px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
-            color: activeTab === 'listings' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            borderBottom: activeTab === 'listings' ? '2px solid var(--color-primary)' : '2px solid transparent',
-            display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-          }}
-        >
-          <Folder size={16} />
-          <span>Quản Lý Thiết Bị ({myAssets.length})</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('requests')}
-          style={{
-            background: 'none', border: 'none', padding: '12px 4px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
-            color: activeTab === 'requests' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            borderBottom: activeTab === 'requests' ? '2px solid var(--color-primary)' : '2px solid transparent',
-            display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-          }}
-        >
-          <Bell size={16} />
-          <span>Yêu Cầu Thuê ({myBookings.length})</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('add-new')}
-          style={{
-            background: 'none', border: 'none', padding: '12px 4px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
-            color: activeTab === 'add-new' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            borderBottom: activeTab === 'add-new' ? '2px solid var(--color-primary)' : '2px solid transparent',
-            display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
-          }}
-        >
-          <Plus size={16} />
-          <span>Đăng Thiết Bị Mới</span>
-        </button>
+        ) : (
+          myAssets.map(asset => (
+            <div key={asset.id} style={{ ...glassCardStyle, padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ height: '180px', position: 'relative' }}>
+                <img src={asset.imageUrl} alt={asset.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                  <span className={`badge badge-${asset.status === 'paused' ? 'returned' : 'available'}`} style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                    {asset.status === 'paused' ? 'Tạm dừng' : 'Đang hoạt động'}
+                  </span>
+                </div>
+              </div>
+              <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', lineHeight: '1.4' }}>{asset.title}</h3>
+                <div style={{ fontSize: '14px', color: 'var(--color-primary)', fontWeight: '600', marginBottom: '16px' }}>
+                  {formatPrice(asset.pricePerDay)} đ <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: '400' }}>/ ngày</span>
+                </div>
+                
+                <div style={{ marginTop: 'auto', display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+                  <button 
+                    className="btn btn-outline btn-sm"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={() => updateAssetStatus(asset.id, asset.status === 'paused' ? 'available' : 'paused')}
+                  >
+                    {asset.status === 'paused' ? <><Eye size={14} /> Kích hoạt</> : <><EyeOff size={14} /> Tạm dừng</>}
+                  </button>
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={() => setEditingAsset(asset)}
+                  >
+                    <Edit3 size={14} /> Sửa
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Tabs Content */}
-      <main>
-        
-        {/* OVERVIEW & ANALYTICS */}
-        {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '30px' }} className="grid-2">
-            
-            {/* Chart Panel */}
-            <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff' }}>
-              <h3 style={{ fontSize: '18px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
-                Phân Tích Doanh Thu Theo Tháng (đ)
-              </h3>
-              
-              {/* SVG Monthly Bar Chart */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-                <div style={{ height: '220px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '2px solid var(--color-border)' }}>
-                  {monthlyRevenue.map((item, idx) => {
-                    const heightPercent = maxVal > 0 ? (item.val / maxVal) * 80 : 0;
-                    return (
-                      <div key={idx} style={{ 
-                        flex: 1, 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        height: '100%', 
-                        justifyContent: 'flex-end',
-                        padding: '0 8px'
-                      }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '8px' }}>
-                          {formatPrice(item.val)}
-                        </span>
-                        
-                        <div style={{ 
-                          width: '100%', 
-                          maxWidth: '45px', 
-                          height: `${heightPercent}%`, 
-                          background: 'linear-gradient(to top, var(--color-primary) 0%, #3b82f6 100%)',
-                          borderRadius: 'var(--radius-xs) var(--radius-xs) 0 0',
-                          transition: 'height 0.8s ease-out',
-                          boxShadow: 'var(--shadow-sm)'
-                        }} />
-                        
-                        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '8px', whiteSpace: 'nowrap' }}>
-                          {item.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Customers Panel */}
-            <div className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff' }}>
-              <h3 style={{ fontSize: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={18} style={{ color: 'var(--color-secondary)' }} />
-                Thống Kê Khách Hàng
-              </h3>
-
-              {uniqueCustomers.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {uniqueCustomers.map((customer, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--color-dark)' }}>{customer.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>SĐT: {customer.contact}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--color-primary)' }}>
-                          {formatPrice(customer.totalSpent)} đ
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                          {customer.rentalsCount} đơn thuê
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>
-                  Chưa có thông tin khách hàng nào giao dịch.
-                </p>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* LISTINGS MANAGEMENT */}
-        {activeTab === 'listings' && (
-          <div>
-            {myAssets.length > 0 ? (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-                gap: '20px'
-              }}>
-                {myAssets.map((asset) => (
-                  <div key={asset.id} className="glass-panel" style={{ display: 'flex', backgroundColor: '#ffffff', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-                    <img src={asset.imageUrl} alt={asset.title} style={{ width: '130px', height: '100%', objectFit: 'cover' }} />
-                    
-                    <div style={{ padding: '16px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div>
-                        <h4 style={{ 
-                          fontSize: '15px', 
-                          display: '-webkit-box', 
-                          WebkitLineClamp: 2, 
-                          WebkitBoxOrient: 'vertical', 
-                          overflow: 'hidden', 
-                          lineHeight: '1.3',
-                          marginBottom: '6px'
-                        }}>
-                          {asset.title}
-                        </h4>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <MapPin size={12} />
-                          <span>{asset.location}</span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-primary)' }}>
-                            {formatPrice(asset.pricePerDay)} đ
-                          </div>
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>/ ngày</span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                          {/* Active / Paused Badge */}
-                          <span className={`badge badge-${asset.status === 'paused' ? 'returned' : 'available'}`} style={{ fontSize: '10px', textTransform: 'uppercase' }}>
-                            {asset.status === 'paused' ? 'Ngừng thuê' : 'Đang cho thuê'}
-                          </span>
-                          
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            {/* Toggle Status Button */}
-                            <button 
-                              className="btn btn-outline btn-sm"
-                              style={{ 
-                                padding: '4px 8px', 
-                                fontSize: '11px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '4px',
-                                borderColor: asset.status === 'paused' ? 'var(--color-success)' : 'var(--color-border)'
-                              }}
-                              onClick={() => handleToggleAssetStatus(asset.id, asset.status)}
-                            >
-                              {asset.status === 'paused' ? (
-                                <>
-                                  <Eye size={12} />
-                                  <span>Kích hoạt</span>
-                                </>
-                              ) : (
-                                <>
-                                  <EyeOff size={12} />
-                                  <span>Tạm dừng</span>
-                                </>
-                              )}
-                            </button>
-
-                            {/* Edit Button */}
-                            <button 
-                              className="btn btn-primary btn-sm"
-                              style={{ 
-                                padding: '4px 8px', 
-                                fontSize: '11px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '4px'
-                              }}
-                              onClick={() => setEditingAsset(asset)}
-                            >
-                              <Edit3 size={12} />
-                              <span>Sửa</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: '#ffffff', border: '1px solid var(--color-border)' }}>
-                <p style={{ color: 'var(--color-text-muted)', marginBottom: '15px' }}>Bạn chưa có thiết bị cho thuê nào được đăng ký.</p>
-                <button className="btn btn-lessor" onClick={() => setActiveTab('add-new')}>Đăng ký thiết bị đầu tiên</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* BOOKINGS APPROVAL */}
-        {activeTab === 'requests' && (
-          <div className="glass-panel" style={{ backgroundColor: '#ffffff', overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-            {myBookings.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '750px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)' }}>Thiết bị</th>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)' }}>Khách hàng</th>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)' }}>Thời gian thuê</th>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)' }}>Doanh thu dự kiến</th>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)' }}>Trạng thái</th>
-                    <th style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: 'var(--color-text-muted)', textAlign: 'center' }}>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {myBookings.map((b) => (
-                    <tr key={b.id} style={{ borderBottom: '1px solid var(--color-border)', transition: 'var(--transition-fast)' }}>
-                      <td style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src={b.assetImage} alt={b.assetTitle} style={{ width: '45px', height: '45px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--color-border)' }} />
-                        <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--color-dark)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {b.assetTitle}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--color-dark)' }}>{b.renterName}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>SĐT: {b.renterContact}</div>
-                      </td>
-                      <td style={{ padding: '16px 20px', fontSize: '13px' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Calendar size={13} style={{ color: 'var(--color-text-muted)' }} />
-                          {b.startDate} → {b.endDate}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 20px', fontWeight: '800', color: 'var(--color-primary)', fontSize: '14px' }}>
-                        {formatPrice(b.totalPrice)} đ
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <span className={`badge badge-${b.status}`}>
-                          {b.status === 'pending' && 'Chờ duyệt'}
-                          {b.status === 'approved' && 'Đã duyệt'}
-                          {b.status === 'returned' && 'Đã trả'}
-                          {b.status === 'cancelled' && 'Đã hủy'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                        {b.status === 'pending' ? (
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            <button 
-                              className="btn btn-primary btn-sm" 
-                              onClick={() => handleApproveBooking(b.id)}
-                              style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '2px' }}
-                            >
-                              <Check size={12} />
-                              <span>Duyệt</span>
-                            </button>
-                            
-                            <button 
-                              className="btn btn-outline btn-sm" 
-                              style={{ 
-                                color: 'var(--color-danger)', 
-                                borderColor: 'var(--color-danger)',
-                                padding: '4px 10px', 
-                                fontSize: '11px',
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '2px' 
-                              }}
-                              onClick={() => handleRejectBooking(b.id)}
-                            >
-                              <X size={12} />
-                              <span>Từ chối</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>N/A</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                Chưa nhận được yêu cầu thuê tài sản nào từ khách hàng.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ADD NEW ASSET */}
-        {activeTab === 'add-new' && (
-          <div className="glass-panel" style={{ padding: '30px', backgroundColor: '#ffffff', maxWidth: '750px', margin: '0 auto', border: '1px solid var(--color-border)' }}>
-            <h3 style={{ fontSize: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-dark)' }}>
-              <Plus size={20} style={{ color: 'var(--color-primary)' }} />
-              Đăng ký thiết bị cho thuê mới
-            </h3>
-            
-            <form onSubmit={handleSubmitAsset} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              <div className="form-group">
-                <label>Tên thiết bị quay chụp</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  placeholder="Ví dụ: Máy ảnh Sony Alpha 7R V, Ống kính Canon RF 24-70mm..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Phân loại danh mục</label>
-                  <select className="form-control" value={category} onChange={(e) => setCategory(e.target.value)}>
-                    <option value="canon_cam">Máy ảnh Canon</option>
-                    <option value="sony_cam">Máy ảnh Sony</option>
-                    <option value="fuji_cam">Máy ảnh Fujifilm</option>
-                    <option value="nikon_cam">Máy ảnh Nikon</option>
-                    <option value="olympus_cam">Máy ảnh Olympus</option>
-                    <option value="canon_lens">Ống kính Canon</option>
-                    <option value="sony_lens">Ống kính Sony</option>
-                    <option value="fuji_lens">Ống kính Fujifilm</option>
-                    <option value="sigma_lens">Ống kính Sigma</option>
-                    <option value="tamron_lens">Ống kính Tamron</option>
-                    <option value="flycam">Flycam & Drone</option>
-                    <option value="gimbal">Gimbal & Chống rung</option>
-                    <option value="studio_light">Ánh sáng & Studio</option>
-                    <option value="audio">Thiết bị âm thanh</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Khu vực cho thuê</label>
-                  <select className="form-control" value={location} onChange={(e) => setLocation(e.target.value)}>
-                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                    <option value="Hà Nội">Hà Nội</option>
-                    <option value="Đà Nẵng">Đà Nẵng</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Giá cho thuê / Ngày (đ)</label>
-                  <input 
-                    type="number" 
-                    className="form-control" 
-                    placeholder="Ví dụ: 350000"
-                    value={pricePerDay}
-                    onChange={(e) => setPricePerDay(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Hình ảnh mô phỏng (Chọn mẫu có sẵn)</label>
-                  <select className="form-control" value={imageSelect} onChange={(e) => setImageSelect(e.target.value)}>
-                    <option value="/camera.png">Mẫu Máy ảnh (Camera)</option>
-                    <option value="/flycam.png">Mẫu Flycam (Drone)</option>
-                    <option value="/gimbal.png">Mẫu Gimbal (Stabilizer)</option>
-                    <option value="/light.png">Mẫu Đèn Studio (LED Light)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Ngàm máy ảnh (Mount)</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="VD: Sony E, Canon RF..."
-                    value={mount}
-                    onChange={(e) => setMount(e.target.value)}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Loại máy ảnh (Type)</label>
-                  <select className="form-control" value={cameraType} onChange={(e) => setCameraType(e.target.value)}>
-                    <option value="">Không xác định</option>
-                    <option value="Mirrorless">Mirrorless</option>
-                    <option value="DSLR">DSLR</option>
-                    <option value="Compact">Compact</option>
-                    <option value="Action Cam">Action Cam</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Loại cảm biến (Sensor)</label>
-                  <select className="form-control" value={sensorType} onChange={(e) => setSensorType(e.target.value)}>
-                    <option value="">Không xác định</option>
-                    <option value="Full-frame">Full-frame</option>
-                    <option value="APS-C (Crop)">APS-C (Crop)</option>
-                    <option value="Micro Four Thirds">Micro Four Thirds</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Thông số kỹ thuật chung (Phân cách bằng dấu phẩy)</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="Ví dụ: Quay phim 8K, 3-axis stabilization..."
-                    value={specsText}
-                    onChange={(e) => setSpecsText(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Mô tả chi tiết & Quy định cho thuê</label>
-                <textarea 
-                  className="form-control" 
-                  placeholder="Mô tả chi tiết tình trạng thiết bị, phụ kiện kèm theo (pin, sạc, thẻ nhớ), quy định nhận trả và đặt cọc..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                ></textarea>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setActiveTab('overview')}>Hủy</button>
-                <button type="submit" className="btn btn-lessor" style={{ backgroundColor: 'var(--color-secondary)' }}>Đăng thiết bị ngay</button>
-              </div>
-            </form>
-          </div>
-        )}
-
-      </main>
-
-      {/* Edit Modal */}
       {editingAsset && (
         <AssetEditModal
           asset={editingAsset}
           onClose={() => setEditingAsset(null)}
-          onSave={handleSaveEdit}
+          onSave={(updatedData) => {
+            updateAssetDetails(editingAsset.id, updatedData);
+            setEditingAsset(null);
+            alert('Cập nhật thiết bị thành công!');
+          }}
         />
       )}
+    </div>
+  );
+
+  const renderOrders = () => (
+    <div className="animate-fade-in">
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Quản lý Đơn Hàng</h2>
+      <div style={{ ...glassCardStyle, padding: '0', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead style={{ backgroundColor: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
+              <tr>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Mã Đơn</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Khách Hàng</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Thiết Bị</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Thời Gian</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng Tiền</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Trạng Thái</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right' }}>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myBookings.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào.</td>
+                </tr>
+              ) : (
+                myBookings.map(b => (
+                  <tr key={b.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>#{b.id.split('-')[1]}</td>
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '600' }}>{b.renterName}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '14px' }}>{b.assetTitle}</td>
+                    <td style={{ padding: '16px', fontSize: '14px' }}>
+                      <div>Từ: {new Date(b.startDate).toLocaleDateString('vi-VN')}</div>
+                      <div>Đến: {new Date(b.endDate).toLocaleDateString('vi-VN')}</div>
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)' }}>{formatPrice(b.totalPrice)} đ</td>
+                    <td style={{ padding: '16px' }}>
+                      <span className={`badge badge-${b.status}`} style={{ fontSize: '11px' }}>
+                        {b.status === 'pending' && 'Chờ Duyệt'}
+                        {b.status === 'approved' && 'Đang Thuê'}
+                        {b.status === 'returned' && 'Hoàn Tất'}
+                        {b.status === 'rejected' && 'Đã Hủy'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'right' }}>
+                      {b.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button className="btn btn-primary btn-sm" onClick={() => updateBookingStatus(b.id, 'approved')}><Check size={14}/></button>
+                          <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={14}/></button>
+                        </div>
+                      )}
+                      {b.status === 'approved' && (
+                        <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'returned')}>Nhận lại máy</button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWallet = () => (
+    <div className="animate-fade-in">
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Ví & Dòng Tiền</h2>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+        <div style={{ ...glassCardStyle, backgroundColor: 'var(--color-dark)', color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ padding: '10px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}>
+              <Wallet size={24} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontSize: '14px', opacity: 0.8 }}>Số Dư Khả Dụng (Net)</div>
+              <div style={{ fontSize: '32px', fontWeight: '800' }}>{formatPrice(netRevenue)} đ</div>
+            </div>
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%', backgroundColor: '#fff', color: 'var(--color-dark)' }}>Yêu Cầu Rút Tiền</button>
+        </div>
+
+        <div style={glassCardStyle}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Cơ cấu dòng tiền</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Tổng Khách Hàng Đã Trả (Gross)</span>
+              <span style={{ fontWeight: '600', fontSize: '16px' }}>{formatPrice(totalGrossRevenue)} đ</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px dashed var(--color-border)' }}>
+              <span style={{ color: 'var(--color-error)' }}>Chiết Khấu Nền Tảng (10%)</span>
+              <span style={{ fontWeight: '600', color: 'var(--color-error)' }}>- {formatPrice(platformFee)} đ</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--color-primary)', fontWeight: '700' }}>Thực Nhận Của Partner (Net)</span>
+              <span style={{ fontWeight: '800', fontSize: '20px', color: 'var(--color-primary)' }}>{formatPrice(netRevenue)} đ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={glassCardStyle}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>Luồng Tiền Tệ (Cashflow Process)</h3>
+        
+        {/* Progress Tracker */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', paddingBottom: '20px' }}>
+          <div style={{ position: 'absolute', top: '20px', left: '0', right: '0', height: '4px', backgroundColor: 'var(--color-border)', zIndex: 0 }}></div>
+          <div style={{ position: 'absolute', top: '20px', left: '0', width: '66%', height: '4px', backgroundColor: 'var(--color-primary)', zIndex: 1 }}></div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, backgroundColor: '#fff', padding: '0 10px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+              <CreditCard size={20} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: '600' }}>Khách Thanh Toán</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Nền tảng giữ 100%</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, backgroundColor: '#fff', padding: '0 10px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+              <ShoppingCart size={20} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: '600' }}>Thuê Máy Hoàn Tất</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Khách trả lại thiết bị</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, backgroundColor: '#fff', padding: '0 10px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-bg)', border: '2px solid var(--color-primary)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+              <ArrowRight size={20} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-primary)' }}>Chuyển Tiền</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Trừ 10% phí</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, backgroundColor: '#fff', padding: '0 10px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-border)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+              <Wallet size={20} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-muted)' }}>Vào Ví Partner</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Sẵn sàng rút</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ ...glassCardStyle, marginTop: '24px', padding: '0', overflow: 'hidden' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '24px', marginBottom: '16px' }}>Dòng tiền theo giao dịch</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead style={{ backgroundColor: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
+              <tr>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Mã Đơn</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Sản phẩm</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng thu (Gross)</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Phí Nền Tảng (10%)</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Thực nhận (Net)</th>
+                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Trạng thái tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myBookings.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có giao dịch nào phát sinh.</td>
+                </tr>
+              ) : (
+                myBookings.map(b => {
+                  const gross = b.totalPrice || 0;
+                  const fee = gross * PLATFORM_FEE_PERCENTAGE;
+                  const net = gross - fee;
+                  
+                  let cashStatus = '';
+                  let cashStatusColor = '';
+                  
+                  if (b.status === 'pending') {
+                    cashStatus = 'Chưa thanh toán';
+                    cashStatusColor = 'var(--color-text-muted)';
+                  } else if (b.status === 'approved') {
+                    cashStatus = 'Nền tảng đang giữ';
+                    cashStatusColor = 'var(--color-warning)';
+                  } else if (b.status === 'returned') {
+                    cashStatus = 'Đã cộng vào ví';
+                    cashStatusColor = 'var(--color-success)';
+                  } else if (b.status === 'rejected') {
+                    cashStatus = 'Đã hoàn tiền';
+                    cashStatusColor = 'var(--color-error)';
+                  }
+
+                  return (
+                    <tr key={b.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>#{b.id.split('-')[1]}</td>
+                      <td style={{ padding: '16px', fontSize: '14px' }}>{b.assetTitle}</td>
+                      <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>{formatPrice(gross)} đ</td>
+                      <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-error)' }}>- {formatPrice(fee)} đ</td>
+                      <td style={{ padding: '16px', fontSize: '14px', fontWeight: '700', color: 'var(--color-primary)' }}>{formatPrice(net)} đ</td>
+                      <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: cashStatusColor }}>
+                        {cashStatus}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Add New Form States
+  const [newTitle, setNewTitle] = useState('');
+  const [newCategory, setNewCategory] = useState('sony_cam');
+  const [newLocation, setNewLocation] = useState('TP. Hồ Chí Minh');
+  const [newPricePerDay, setNewPricePerDay] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newSpecsText, setNewSpecsText] = useState('');
+  const [newImageSelect, setNewImageSelect] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [newMount, setNewMount] = useState('');
+  const [newCameraType, setNewCameraType] = useState('');
+  const [newSensorType, setNewSensorType] = useState('');
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('https://api.imgh.in/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'sk_live_9mprbxu7g1vv5abjjmgmb'
+        },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const fullUrl = data.url.startsWith('http') ? data.url : 'https://' + data.url;
+        setNewImageSelect(fullUrl);
+      } else {
+        alert('Upload thất bại: ' + (data.error || 'Lỗi không xác định'));
+      }
+    } catch (err) {
+      alert('Lỗi upload: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddNewSubmit = (e) => {
+    e.preventDefault();
+    const specsArray = newSpecsText.split(',').map(s => s.trim()).filter(s => s !== '');
+    addAsset({
+      title: newTitle,
+      category: newCategory,
+      location: newLocation,
+      pricePerDay: parseInt(newPricePerDay),
+      imageUrl: newImageSelect,
+      description: newDescription,
+      specs: specsArray.length > 0 ? specsArray : ['Hoạt động hoàn hảo'],
+      mount: newMount,
+      cameraType: newCameraType,
+      sensorType: newSensorType,
+      ownerId: user?.id || 'demo-user-id',
+      ownerName: user?.name || 'Nguyễn Minh Quân'
+    });
+    alert('Đăng thiết bị thành công!');
+    setNewTitle(''); setNewPricePerDay(''); setNewDescription(''); setNewSpecsText('');
+    setNewMount(''); setNewCameraType(''); setNewSensorType('');
+    setActiveTab('listings');
+  };
+
+  const renderAddNew = () => (
+    <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Đăng Thiết Bị Mới</h2>
+      <div style={glassCardStyle}>
+        <form onSubmit={handleAddNewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="form-group">
+            <label>Tên thiết bị</label>
+            <input type="text" className="form-control" value={newTitle} onChange={e => setNewTitle(e.target.value)} required />
+          </div>
+          
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Danh mục</label>
+              <select className="form-control" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+                <option value="sony_cam">Máy ảnh Sony</option>
+                <option value="canon_cam">Máy ảnh Canon</option>
+                <option value="fuji_cam">Máy ảnh Fujifilm</option>
+                <option value="nikon_cam">Máy ảnh Nikon</option>
+                <option value="sony_lens">Ống kính Sony</option>
+                <option value="canon_lens">Ống kính Canon</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Hình ảnh thiết bị {isUploading && <span style={{fontSize:'12px', color:'var(--color-primary)', marginLeft:'8px'}}>(Đang tải lên...)</span>}</label>
+              <input type="file" accept="image/*" className="form-control" onChange={handleImageUpload} disabled={isUploading} />
+              {newImageSelect && (
+                <div style={{marginTop: '10px', width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)'}}>
+                  <img src={newImageSelect} alt="Preview" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Ngàm máy ảnh</label>
+              <input type="text" className="form-control" value={newMount} onChange={e => setNewMount(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Loại máy ảnh</label>
+              <select className="form-control" value={newCameraType} onChange={e => setNewCameraType(e.target.value)}>
+                <option value="">Chọn loại</option>
+                <option value="Mirrorless">Mirrorless</option>
+                <option value="DSLR">DSLR</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Loại cảm biến</label>
+              <select className="form-control" value={newSensorType} onChange={e => setNewSensorType(e.target.value)}>
+                <option value="">Chọn cảm biến</option>
+                <option value="Full-frame">Full-frame</option>
+                <option value="APS-C (Crop)">APS-C (Crop)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Giá Thuê / Ngày</label>
+              <input type="number" className="form-control" value={newPricePerDay} onChange={e => setNewPricePerDay(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Thông số kỹ thuật chung</label>
+            <input type="text" className="form-control" value={newSpecsText} onChange={e => setNewSpecsText(e.target.value)} />
+          </div>
+
+          <div className="form-group">
+            <label>Mô tả chi tiết</label>
+            <textarea className="form-control" style={{ minHeight: '100px' }} value={newDescription} onChange={e => setNewDescription(e.target.value)} required></textarea>
+          </div>
+
+          <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', minWidth: '150px' }}>Đăng Tải</button>
+        </form>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', minHeight: 'calc(100vh - 70px)', backgroundColor: '#f8fafc' }}>
+      
+      {/* Sidebar */}
+      <aside style={{ 
+        width: isSidebarOpen ? '260px' : '80px', 
+        backgroundColor: '#ffffff', 
+        borderRight: '1px solid var(--color-border)',
+        transition: 'width 0.3s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative'
+      }}>
+        {/* Toggle Button */}
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          style={{
+            position: 'absolute',
+            right: '-14px',
+            top: '24px',
+            width: '28px',
+            height: '28px',
+            backgroundColor: '#fff',
+            border: '1px solid var(--color-border)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 10,
+            color: 'var(--color-text-main)',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+          }}
+        >
+          {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+        </button>
+
+        <div style={{ padding: '32px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+          <img src={user?.avatar} alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          {isSidebarOpen && (
+            <div style={{ whiteSpace: 'nowrap' }}>
+              <div style={{ fontWeight: '700', fontSize: '15px' }}>{user?.name}</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Partner</div>
+            </div>
+          )}
+        </div>
+
+        <nav style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+          {[
+            { id: 'overview', icon: LayoutDashboard, label: 'Tổng Quan' },
+            { id: 'listings', icon: Package, label: 'Thiết Bị Của Tôi' },
+            { id: 'orders', icon: ShoppingCart, label: 'Đơn Hàng' },
+            { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' },
+            { id: 'add-new', icon: PlusCircle, label: 'Đăng Thiết Bị' },
+          ].map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: isActive ? 'var(--color-primary-light)' : 'transparent',
+                  color: isActive ? 'var(--color-primary-hover)' : 'var(--color-text-main)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontWeight: isActive ? '600' : '500',
+                  justifyContent: isSidebarOpen ? 'flex-start' : 'center'
+                }}
+                title={!isSidebarOpen ? item.label : ''}
+              >
+                <Icon size={20} />
+                {isSidebarOpen && <span>{item.label}</span>}
+              </button>
+            )
+          })}
+        </nav>
+      </aside>
+
+      {/* Main Content Area */}
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', overflowX: 'hidden' }}>
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'listings' && renderListings()}
+        {activeTab === 'orders' && renderOrders()}
+        {activeTab === 'wallet' && renderWallet()}
+        {activeTab === 'add-new' && renderAddNew()}
+      </main>
+
     </div>
   );
 }
