@@ -160,6 +160,7 @@ export const StoreProvider = ({ children }) => {
   const [assets, setAssets] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [currentCheckout, setCurrentCheckout] = useState(null);
 
   // Auth States
   const [user, setUser] = useState(null);
@@ -235,7 +236,9 @@ export const StoreProvider = ({ children }) => {
             isStaff: (useCache ? cachedUser.isStaff : null) || metadata.isStaff || activeUser.email?.toLowerCase().endsWith('@gearup.vn') || false,
             phone: (useCache ? cachedUser.phone : null) || metadata.phone || '',
             citizenId: (useCache ? cachedUser.citizenId : null) || metadata.citizenId || '',
-            studioName: (useCache ? cachedUser.studioName : null) || metadata.studioName || ''
+            studioName: (useCache ? cachedUser.studioName : null) || metadata.studioName || '',
+            address: (useCache ? cachedUser.address : null) || metadata.address || '',
+            favorites: (useCache ? cachedUser.favorites : null) || metadata.favorites || []
           };
 
           // Cache the verified user session details
@@ -280,7 +283,9 @@ export const StoreProvider = ({ children }) => {
                   partnerStatus: data.partner_status || (data.is_partner ? 'approved' : prev.partnerStatus),
                   phone: data.phone || prev.phone,
                   citizenId: data.citizen_id || prev.citizenId,
-                  studioName: data.studio_name || prev.studioName
+                  studioName: data.studio_name || prev.studioName,
+                  address: data.address || prev.address,
+                  favorites: prev.favorites || []
                 };
                 localStorage.setItem('gearup_current_user', JSON.stringify(merged));
                 return merged;
@@ -404,6 +409,49 @@ export const StoreProvider = ({ children }) => {
     localStorage.removeItem('gearup_current_user');
     setUser(null);
     return { error: null };
+  };
+
+  const updateUserProfile = async (updatedData) => {
+    if (!user) return { error: new Error('Vui lòng đăng nhập trước!') };
+    
+    const updatedUser = { ...user, ...updatedData };
+    
+    // Update local state and cache
+    setUser(updatedUser);
+    localStorage.setItem('gearup_current_user', JSON.stringify(updatedUser));
+    
+    // Update in Supabase Auth & Profiles
+    if (user.id && !user.id.startsWith('user-')) {
+      if (supabase.auth.updateUser) {
+        // Update auth metadata (optional, but good for sync)
+        await supabase.auth.updateUser({
+          data: {
+            name: updatedUser.name,
+            phone: updatedUser.phone,
+            avatar: updatedUser.avatar,
+            citizenId: updatedUser.citizenId,
+            studioName: updatedUser.studioName,
+            address: updatedUser.address,
+            favorites: updatedUser.favorites
+          }
+        });
+      }
+      
+      const { error } = await supabase.from('profiles').update({
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        avatar: updatedUser.avatar,
+        citizen_id: updatedUser.citizenId,
+        studio_name: updatedUser.studioName,
+        address: updatedUser.address
+      }).eq('id', user.id);
+      
+      if (error) {
+        console.warn('[Supabase Profiles] Error updating profile:', error);
+        return { error };
+      }
+    }
+    return { data: updatedUser, error: null };
   };
 
   const registerPartner = async (phone, citizenId, studioName) => {
@@ -772,7 +820,21 @@ export const StoreProvider = ({ children }) => {
         updateBanner,
         deleteBanner,
         isAppLoading,
-        updateAssetDetails
+        updateAssetDetails,
+        currentCheckout,
+        setCurrentCheckout,
+        updateUserProfile,
+        toggleFavorite: async (assetId) => {
+          if (!user) {
+            alert('Vui lòng đăng nhập để thêm vào danh sách yêu thích!');
+            return;
+          }
+          const isFavorited = user.favorites?.includes(assetId);
+          const newFavorites = isFavorited 
+            ? user.favorites.filter(id => id !== assetId)
+            : [...(user.favorites || []), assetId];
+          await updateUserProfile({ favorites: newFavorites });
+        }
       }}
     >
       {children}

@@ -12,6 +12,10 @@ import PartnerPortal from './pages/PartnerPortal';
 import PlatformDashboard from './pages/PlatformDashboard';
 import BlogPage from './pages/BlogPage';
 import WelcomePromoPage from './pages/WelcomePromoPage';
+import Checkout from './pages/Checkout';
+import AccountSettings from './pages/AccountSettings';
+import Favorites from './pages/Favorites';
+import GearMember from './pages/GearMember';
 import AuthModal from './components/AuthModal';
 
 function MainAppContent() {
@@ -22,8 +26,67 @@ function MainAppContent() {
     window.location.hostname.startsWith('admin.') || 
     window.location.hostname.startsWith('sso.') || 
     window.location.search.includes('portal=admin');
-  const [currentPage, setCurrentPage] = useState('home');
-  const [selectedAssetId, setSelectedAssetId] = useState(null);
+  const [currentPage, setInternalPage] = useState('home');
+  const [selectedAssetId, setInternalAssetId] = useState(null);
+
+  // Sync state to URL and history
+  const setCurrentPage = (page, assetId = null) => {
+    setInternalPage(page);
+    if (assetId) setInternalAssetId(assetId);
+
+    let path = '/';
+    if (page === 'home') path = '/';
+    else if (page === 'asset-detail') path = `/asset/${assetId || selectedAssetId}`;
+    else path = `/${page}`;
+    
+    if (window.location.pathname !== path) {
+      window.history.pushState({ page, assetId: assetId || selectedAssetId }, '', path);
+    }
+  };
+
+  const setSelectedAssetId = (id) => {
+    setInternalAssetId(id);
+    if (currentPage === 'asset-detail' && id) {
+       window.history.pushState({ page: 'asset-detail', assetId: id }, '', `/asset/${id}`);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const state = event?.state;
+      if (state && state.page) {
+        setInternalPage(state.page);
+        if (state.assetId) setInternalAssetId(state.assetId);
+      } else {
+        // Fallback parse URL on direct load
+        const path = window.location.pathname;
+        if (path === '/' || path === '') {
+          setInternalPage('home');
+        } else if (path.startsWith('/asset/')) {
+          setInternalPage('asset-detail');
+          setInternalAssetId(path.split('/')[2]);
+        } else if (path.startsWith('/blog/')) {
+          setInternalPage(`blog/${path.split('/')[2]}`);
+        } else if (path.startsWith('/promo/welcome')) {
+          setInternalPage('promo/welcome');
+        } else {
+          setInternalPage(path.substring(1));
+        }
+      }
+    };
+    
+    // Initial parse to support direct URL access
+    if (!window.history.state || !window.history.state.page) {
+        const path = window.location.pathname;
+        if (path === '/' || path === '') {
+          window.history.replaceState({ page: 'home', assetId: null }, '', '/');
+        }
+    }
+    handlePopState({ state: window.history.state });
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   const [filters, setFilters] = useState({
     search: '',
@@ -49,6 +112,10 @@ function MainAppContent() {
     link.href = faviconUrl;
   }, [isAdminPortal, isPartnerPortal]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [currentPage, selectedAssetId]);
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -67,6 +134,16 @@ function MainAppContent() {
             setCurrentPage={setCurrentPage} 
           />
         );
+      case 'checkout':
+        return <Checkout setCurrentPage={setCurrentPage} />;
+      case 'account-settings':
+        return <AccountSettings setCurrentPage={setCurrentPage} />;
+      case 'favorites':
+        return <Favorites setCurrentPage={setCurrentPage} />;
+      case 'gear-member':
+        return <GearMember setCurrentPage={setCurrentPage} />;
+      case 'giai-phap-doi-tac':
+        return <BlogPage slug="giai-phap-doi-tac" setCurrentPage={setCurrentPage} />;
       case 'customer-dashboard':
         return <CustomerDashboard />;
       case 'partner-dashboard':

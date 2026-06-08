@@ -4,7 +4,7 @@ import AssetCard, { formatPrice } from '../components/AssetCard';
 import { ArrowLeft, MessageSquare, Heart } from 'lucide-react';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
-  const { assets, addBooking, addMessage, messages, user } = useContext(StoreContext);
+  const { assets, addMessage, messages, user, setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
 
@@ -38,6 +38,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
 
   // Find asset
   const asset = assets.find((a) => a.id === assetId);
+  const isFavorited = user?.favorites?.includes(asset?.id);
 
   // If asset not found
   if (!asset) {
@@ -87,24 +88,22 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       return;
     }
 
-    // Call addBooking in StoreContext
-    addBooking({
+    // Save to currentCheckout and redirect to checkout page
+    setCurrentCheckout({
       assetId: asset.id,
       assetTitle: asset.title,
       assetImage: asset.imageUrl,
       pricePerDay: asset.pricePerDay,
       startDate,
       endDate,
+      rentalDays,
       totalPrice,
       renterName,
-      renterContact
+      renterContact,
+      ownerId: asset.ownerId
     });
 
-    setBookingSuccess(true);
-    setTimeout(() => {
-      setBookingSuccess(false);
-      setCurrentPage('customer-dashboard');
-    }, 2000);
+    setCurrentPage('checkout');
   };
 
   const handleSendMessage = (e) => {
@@ -228,8 +227,14 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
                       {asset.status === 'available' ? 'Thuê Ngay' : 'Không Sẵn Sàng'}
                     </button>
                     {user && (
-                      <button type="button" className="btn btn-outline" style={{ height: '48px', padding: '0 20px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => alert('Đã thêm vào danh sách yêu thích')}>
-                        <Heart size={20} />
+                      <button 
+                        type="button" 
+                        className="btn btn-outline" 
+                        style={{ height: '48px', padding: '0 20px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isFavorited ? '#ef4444' : 'inherit', borderColor: isFavorited ? '#ef4444' : 'var(--color-border)' }} 
+                        onClick={() => toggleFavorite(asset.id)}
+                        title={isFavorited ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                      >
+                        <Heart size={20} fill={isFavorited ? '#ef4444' : 'none'} />
                       </button>
                     )}
                   </div>

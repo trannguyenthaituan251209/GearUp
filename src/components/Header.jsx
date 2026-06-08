@@ -1,9 +1,10 @@
 import React, { useContext, useState } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText, Bell, ShoppingCart, Menu, X } from 'lucide-react';
+import { User, Briefcase, LogOut, Shield, Search, Home, UserPlus, FileText, Bell, ShoppingCart, Menu, X, Settings, Heart, Crown } from 'lucide-react';
 
 export default function Header({ currentPage, setCurrentPage }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
   const {
     user,
@@ -133,52 +134,12 @@ export default function Header({ currentPage, setCurrentPage }) {
             </a>
             <a
               href="#"
-              className={currentPage === 'blog/giai-phap-doi-tac' ? 'active' : ''}
-              onClick={(e) => { e.preventDefault(); setCurrentPage('blog/giai-phap-doi-tac'); }}
+              className={currentPage === 'giai-phap-doi-tac' ? 'active' : ''}
+              onClick={(e) => { e.preventDefault(); setCurrentPage('giai-phap-doi-tac'); }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Briefcase size={14} /> Giải pháp dành cho đối tác
             </a>
-
-            {user && (
-              <a
-                href="#"
-                className={currentPage === 'customer-dashboard' ? 'active' : ''}
-                onClick={(e) => { e.preventDefault(); setCurrentPage('customer-dashboard'); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <User size={14} /> Lịch Sử Thuê
-              </a>
-            )}
-
-            {user && user.isPartner ? (
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = getPartnerUrl();
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Briefcase size={14} /> Đến trang cửa hàng
-              </a>
-            ) : (
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!user) {
-                    alert('Vui lòng đăng nhập tài khoản khách hàng trước khi đăng ký trở thành đối tác!');
-                    setShowAuthModal(true);
-                  } else {
-                    setCurrentPage('partner-register');
-                  }
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <UserPlus size={14} /> Đăng ký trở thành đối tác
-              </a>
-            )}
 
             <a
               href="#"
@@ -269,23 +230,71 @@ export default function Header({ currentPage, setCurrentPage }) {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px', borderLeft: '1px solid var(--color-border)' }}>
-              <img
-                src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-                alt={user.name}
-                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-dark)' }} className="user-name-display">
-                {user.name.split(' ').pop()}
-              </span>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={logoutUser}
-                style={{ padding: '6px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                title="Đăng xuất"
+            <div style={{ position: 'relative' }}>
+              <div 
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px', borderLeft: '1px solid var(--color-border)', cursor: 'pointer' }}
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               >
-                <LogOut size={16} />
-              </button>
+                <img
+                  src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                  alt={user.name}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-dark)' }} className="user-name-display">
+                  {user.name.split(' ').pop()}
+                </span>
+              </div>
+
+              {isUserMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '10px',
+                  backgroundColor: '#fff',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  minWidth: '200px',
+                  zIndex: 1000,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+                    <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--color-dark)' }}>{user.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
+                  </div>
+                  
+                  <div style={{ padding: '8px 0' }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('gear-member'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: '#ca8a04', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s', fontWeight: '600' }} onMouseOver={(e) => e.target.style.backgroundColor = '#fefce8'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                      <Crown size={16} color="#eab308" fill="#fef08a" /> Đăng ký GearMember
+                    </a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('account-settings'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                      <Settings size={16} /> Cài đặt tài khoản
+                    </a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('favorites'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                      <Heart size={16} /> Thiết bị yêu thích
+                    </a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('customer-dashboard'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                      <User size={16} /> Lịch sử đơn thuê
+                    </a>
+                    {user.isPartner ? (
+                      <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); window.location.href = getPartnerUrl(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                        <Briefcase size={16} /> Quản lý cửa hàng
+                      </a>
+                    ) : (
+                      <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('partner-register'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                        <UserPlus size={16} /> Đăng ký trở thành đối tác
+                      </a>
+                    )}
+                  </div>
+                  
+                  <div style={{ padding: '8px 0', borderTop: '1px solid var(--color-border)' }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); logoutUser(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-danger)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s', fontWeight: '500' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                      <LogOut size={16} /> Đăng xuất
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

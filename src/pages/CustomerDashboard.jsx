@@ -96,13 +96,14 @@ export default function CustomerDashboard() {
 
   // Stats calculation
   const totalRentals = myBookings.length;
-  const rentingCount = myBookings.filter(b => b.status === 'approved').length;
+  const rentingCount = myBookings.filter(b => b.status === 'approved' || b.status === 'paid').length;
   const returnedCount = myBookings.filter(b => b.status === 'returned').length;
   const cancelledCount = myBookings.filter(b => b.status === 'cancelled').length;
 
   // Filtered bookings based on sub-tab status
   const filteredBookings = myBookings.filter(b => {
     if (statusFilter === 'all') return true;
+    if (statusFilter === 'approved' && b.status === 'paid') return true;
     return b.status === statusFilter;
   });
 
@@ -213,7 +214,7 @@ export default function CustomerDashboard() {
               {[
                 { id: 'all', label: 'Tất cả đơn' },
                 { id: 'pending', label: 'Chờ duyệt' },
-                { id: 'approved', label: 'Đang thuê' },
+                { id: 'approved', label: 'Đã thanh toán / Đang thuê' },
                 { id: 'returned', label: 'Đã hoàn thành' },
                 { id: 'cancelled', label: 'Đã hủy' }
               ].map(tab => (
@@ -299,16 +300,16 @@ export default function CustomerDashboard() {
                         {formatPrice(booking.totalPrice)} đ
                       </div>
                       
-                      <span className={`badge badge-${booking.status}`} style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <span className={`badge badge-${booking.status === 'paid' ? 'approved' : booking.status}`} style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {booking.status === 'pending' && 'Chờ duyệt'}
-                        {booking.status === 'approved' && 'Đang thuê'}
+                        {(booking.status === 'approved' || booking.status === 'paid') && (new Date() < new Date(booking.startDate) ? 'Đã thanh toán' : 'Đang thuê')}
                         {booking.status === 'returned' && 'Đã hoàn thành'}
                         {booking.status === 'cancelled' && 'Đã hủy'}
                       </span>
                       
                       {/* Action buttons */}
                       <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                        {booking.status === 'pending' && (
+                        {(booking.status === 'pending' || ((booking.status === 'approved' || booking.status === 'paid') && new Date() < new Date(booking.startDate))) && (
                           <button 
                             className="btn btn-outline btn-sm"
                             style={{ 
@@ -321,25 +322,41 @@ export default function CustomerDashboard() {
                             onClick={() => handleCancelBooking(booking.id)}
                           >
                             <Trash2 size={13} />
-                            <span>Hủy đơn</span>
+                            <span>Báo hủy</span>
                           </button>
                         )}
                         
-                        {booking.status === 'approved' && (
-                          <button 
-                            className="btn btn-secondary btn-sm"
-                            style={{ 
-                              backgroundColor: 'var(--color-primary-light)', 
-                              color: 'var(--color-primary)', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px' 
-                            }}
-                            onClick={() => handleReturnAsset(booking.id)}
-                          >
-                            <RotateCcw size={13} />
-                            <span>Hoàn Trả Thiết Bị</span>
-                          </button>
+                        {(booking.status === 'approved' || booking.status === 'paid') && new Date() >= new Date(booking.startDate) && (
+                          <>
+                            <button 
+                              className="btn btn-outline btn-sm"
+                              style={{ 
+                                color: 'var(--color-primary)', 
+                                borderColor: 'var(--color-primary)',
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px' 
+                              }}
+                              onClick={() => alert('Tính năng Thuê thêm ngày đang được phát triển!')}
+                            >
+                              <Calendar size={13} />
+                              <span>Thuê thêm</span>
+                            </button>
+                            <button 
+                              className="btn btn-secondary btn-sm"
+                              style={{ 
+                                backgroundColor: 'var(--color-primary-light)', 
+                                color: 'var(--color-primary)', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px' 
+                              }}
+                              onClick={() => handleReturnAsset(booking.id)}
+                            >
+                              <RotateCcw size={13} />
+                              <span>Hoàn trả</span>
+                            </button>
+                          </>
                         )}
 
                         <button

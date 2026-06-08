@@ -41,7 +41,7 @@ export default function PartnerDashboard() {
   const myBookings = useMemo(() => bookings.filter(b => myAssetIds.includes(b.assetId)), [bookings, myAssetIds]);
 
   const totalGrossRevenue = useMemo(() => myBookings
-    .filter(b => ['approved', 'returned'].includes(b.status))
+    .filter(b => ['approved', 'paid', 'returned'].includes(b.status))
     .reduce((acc, curr) => acc + curr.totalPrice, 0), [myBookings]);
 
   // PLATFORM FEE LOGIC: 10%
@@ -262,9 +262,9 @@ export default function PartnerDashboard() {
                     </td>
                     <td style={{ padding: '16px', fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)' }}>{formatPrice(b.totalPrice)} đ</td>
                     <td style={{ padding: '16px' }}>
-                      <span className={`badge badge-${b.status}`} style={{ fontSize: '11px' }}>
+                      <span className={`badge badge-${b.status === 'paid' ? 'approved' : b.status}`} style={{ fontSize: '11px' }}>
                         {b.status === 'pending' && 'Chờ Duyệt'}
-                        {b.status === 'approved' && 'Đang Thuê'}
+                        {(b.status === 'approved' || b.status === 'paid') && (new Date() < new Date(b.startDate) ? 'Đã Thanh Toán' : 'Đang Thuê')}
                         {b.status === 'returned' && 'Hoàn Tất'}
                         {b.status === 'rejected' && 'Đã Hủy'}
                       </span>
@@ -276,7 +276,7 @@ export default function PartnerDashboard() {
                           <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={14}/></button>
                         </div>
                       )}
-                      {b.status === 'approved' && (
+                      {(b.status === 'approved' || b.status === 'paid') && (
                         <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'returned')}>Nhận lại máy</button>
                       )}
                     </td>
@@ -399,7 +399,7 @@ export default function PartnerDashboard() {
                   if (b.status === 'pending') {
                     cashStatus = 'Chưa thanh toán';
                     cashStatusColor = 'var(--color-text-muted)';
-                  } else if (b.status === 'approved') {
+                  } else if (b.status === 'approved' || b.status === 'paid') {
                     cashStatus = 'Nền tảng đang giữ';
                     cashStatusColor = 'var(--color-warning)';
                   } else if (b.status === 'returned') {

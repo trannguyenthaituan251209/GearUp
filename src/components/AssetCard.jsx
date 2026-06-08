@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { Heart } from 'lucide-react';
+import { StoreContext } from '../context/StoreContext';
 
 // Format price in VND (e.g. 450000 -> 450.000)
 export function formatPrice(price) {
@@ -8,6 +10,9 @@ export function formatPrice(price) {
 
 export default function AssetCard({ asset, onSelect }) {
   const { title, category, pricePerDay, imageUrl, location, rating, status } = asset;
+  const { user, toggleFavorite } = useContext(StoreContext);
+  
+  const isFavorited = user?.favorites?.includes(asset.id);
 
   const getCategoryName = (cat) => {
     switch (cat) {
@@ -27,9 +32,37 @@ export default function AssetCard({ asset, onSelect }) {
   };
 
   return (
-    <div className="asset-card" onClick={onSelect}>
+    <div className="asset-card" onClick={onSelect} style={{ position: 'relative' }}>
       <div className="card-img-container">
         <img src={imageUrl} alt={title} className="card-img" />
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(asset.id);
+          }}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            background: 'rgba(255, 255, 255, 0.8)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            backdropFilter: 'blur(4px)',
+            transition: 'all 0.2s',
+            zIndex: 10,
+            color: isFavorited ? '#ef4444' : '#64748b'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Heart size={18} fill={isFavorited ? '#ef4444' : 'none'} />
+        </button>
       </div>
       
       <div className="card-content">
