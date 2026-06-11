@@ -16,6 +16,8 @@ import Checkout from './pages/Checkout';
 import AccountSettings from './pages/AccountSettings';
 import Favorites from './pages/Favorites';
 import GearMember from './pages/GearMember';
+import SearchResult from './pages/SearchResult';
+import PartnerProfile from './pages/PartnerProfile';
 import AuthModal from './components/AuthModal';
 
 function MainAppContent() {
@@ -37,9 +39,11 @@ function MainAppContent() {
     let path = '/';
     if (page === 'home') path = '/';
     else if (page === 'asset-detail') path = `/asset/${assetId || selectedAssetId}`;
+    else if (page === 'search-result') path = `/search?q=${encodeURIComponent(assetId || selectedAssetId || '')}`;
+    else if (page === 'partner-profile') path = `/partner/${assetId || selectedAssetId}`;
     else path = `/${page}`;
     
-    if (window.location.pathname !== path) {
+    if (window.location.pathname + window.location.search !== path) {
       window.history.pushState({ page, assetId: assetId || selectedAssetId }, '', path);
     }
   };
@@ -62,8 +66,15 @@ function MainAppContent() {
         const path = window.location.pathname;
         if (path === '/' || path === '') {
           setInternalPage('home');
+        } else if (path === '/search') {
+          setInternalPage('search-result');
+          const searchParams = new URLSearchParams(window.location.search);
+          setInternalAssetId(searchParams.get('q') || '');
         } else if (path.startsWith('/asset/')) {
           setInternalPage('asset-detail');
+          setInternalAssetId(path.split('/')[2]);
+        } else if (path.startsWith('/partner/')) {
+          setInternalPage('partner-profile');
           setInternalAssetId(path.split('/')[2]);
         } else if (path.startsWith('/blog/')) {
           setInternalPage(`blog/${path.split('/')[2]}`);
@@ -134,6 +145,17 @@ function MainAppContent() {
             setCurrentPage={setCurrentPage} 
           />
         );
+      case 'search-result':
+        return (
+          <SearchResult 
+            searchQuery={selectedAssetId} 
+            setCurrentPage={setCurrentPage} 
+            filters={filters}
+            setFilters={setFilters}
+          />
+        );
+      case 'partner-profile':
+        return <PartnerProfile partnerId={selectedAssetId} setCurrentPage={setCurrentPage} />;
       case 'checkout':
         return <Checkout setCurrentPage={setCurrentPage} />;
       case 'account-settings':

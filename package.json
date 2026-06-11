@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
+    "dotenv": "^17.4.2",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-image-crop": "^11.0.10",
     "react-quill-new": "^3.8.3",
     "recharts": "^3.8.1"
   },

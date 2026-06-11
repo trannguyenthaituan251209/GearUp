@@ -1,7 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { StoreContext } from '../context/StoreContext';
 import AssetCard, { formatPrice } from '../components/AssetCard';
-import { ArrowLeft, MessageSquare, Heart } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Heart, Star, User } from 'lucide-react';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
   const { assets, addMessage, messages, user, setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
@@ -40,21 +41,64 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
   const asset = assets.find((a) => a.id === assetId);
   const isFavorited = user?.favorites?.includes(asset?.id);
 
-  // If asset not found
-  if (!asset) {
-    return (
-      <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
-        <h2>Không tìm thấy sản phẩm</h2>
-        <button className="btn btn-primary" style={{ marginTop: '20px' }} onClick={goBackToMarket}>
-          Quay lại Chợ tài sản
-        </button>
-      </div>
-    );
-  }
+  const [realOwnerName, setRealOwnerName] = useState(null);
+  const [realOwnerAvatar, setRealOwnerAvatar] = useState(null);
+  
+  // Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+
+  useEffect(() => {
+    if (asset?.ownerId) {
+      supabase
+        .from('profiles')
+        .select('name, studio_name, avatar')
+        .eq('id', asset.ownerId)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setRealOwnerName(data.studio_name || data.name);
+            if (data.avatar) setRealOwnerAvatar(data.avatar);
+          }
+        });
+    }
+  }, [asset?.ownerId]);
+
+  // Fetch Reviews
+  useEffect(() => {
+    if (assetId) {
+      supabase
+        .from('reviews')
+        .select(`
+          id, user_id, service_rating, equipment_rating, average_rating, comment, created_at
+        `)
+        .eq('asset_id', assetId)
+        .order('created_at', { ascending: false })
+        .then(async ({ data, error }) => {
+          if (!error && data) {
+            let enrichedData = data;
+            if (data.length > 0) {
+              const userIds = [...new Set(data.map(r => r.user_id))];
+              const { data: profilesData } = await supabase.from('profiles').select('id, name, avatar').in('id', userIds);
+              
+              if (profilesData) {
+                const profilesMap = {};
+                profilesData.forEach(p => profilesMap[p.id] = p);
+                enrichedData = data.map(r => ({ ...r, profiles: profilesMap[r.user_id] }));
+              }
+              
+              const total = data.reduce((sum, r) => sum + Number(r.average_rating), 0);
+              setAverageRating((total / data.length).toFixed(1));
+            }
+            setReviews(enrichedData);
+          }
+        });
+    }
+  }, [assetId]);
 
   // Calculate rental days & total price when dates change
   useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate && endDate && asset?.pricePerDay) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       
@@ -71,7 +115,21 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       setRentalDays(0);
       setTotalPrice(0);
     }
-  }, [startDate, endDate, asset.pricePerDay]);
+  }, [startDate, endDate, asset?.pricePerDay]);
+
+  // If asset not found
+  if (!asset) {
+    return (
+      <div className="container" style={{ padding: '80px 20px', textAlign: 'center' }}>
+        <h2>Không tìm thấy sản phẩm</h2>
+        <button className="btn btn-primary" style={{ marginTop: '20px' }} onClick={goBackToMarket}>
+          Quay lại Chợ tài sản
+        </button>
+      </div>
+    );
+  }
+
+
 
   const handleBookingSubmit = (e) => {
     e.preventDefault();
@@ -264,20 +322,102 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
         <div className="glass-panel shop-info-bar" style={{ display: 'flex', alignItems: 'center', padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '4px', boxShadow: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
-              <img src={asset.ownerAvatar} alt={asset.ownerName} style={{ width: '78px', height: '78px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #e0e0e0' }} />
+              <img src={realOwnerAvatar || asset.ownerAvatar} alt={realOwnerName || asset.ownerName} style={{ width: '78px', height: '78px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #e0e0e0' }} />
             </div>
             <div style={{ flex: 1, minWidth: '200px' }}>
-              <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>{asset.ownerName}</div>
+              <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>{realOwnerName || asset.ownerName}</div>
               <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '12px' }}>Online 7 Giờ Trước</div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '14px', borderRadius: '4px', flex: '1 1 auto', justifyContent: 'center' }} onClick={() => setShowChatModal(true)}>
                   <MessageSquare size={14} /> Chat Ngay
                 </button>
-                <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#555', borderColor: '#ccc', padding: '6px 16px', fontSize: '14px', borderRadius: '4px', flex: '1 1 auto', justifyContent: 'center' }}>
+                <button 
+                  className="btn btn-outline" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#555', borderColor: '#ccc', padding: '6px 16px', fontSize: '14px', borderRadius: '4px', flex: '1 1 auto', justifyContent: 'center' }}
+                  onClick={() => {
+                    if (asset.ownerId) {
+                      setCurrentPage('partner-profile', asset.ownerId);
+                    } else {
+                      alert("Không tìm thấy ID của chủ cửa hàng!");
+                    }
+                  }}
+                >
                   <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '1px solid #555', borderRadius: '2px', textAlign: 'center', lineHeight: '12px', fontSize: '10px' }}>S</span> Xem Shop
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="glass-panel reviews-section" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: '4px', boxShadow: 'none' }}>
+          <div style={{ backgroundColor: '#fafafa', padding: '14px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '18px', textTransform: 'uppercase', color: 'rgba(0,0,0,.87)' }}>
+              Đánh Giá Sản Phẩm
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={star} 
+                    size={20} 
+                    fill={star <= Math.round(averageRating) ? "#f59e0b" : "none"} 
+                    color={star <= Math.round(averageRating) ? "#f59e0b" : "#cbd5e1"} 
+                  />
+                ))}
+              </div>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>
+                {averageRating > 0 ? `${averageRating}/5` : 'Chưa có'}
+              </span>
+              <span style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>({reviews.length} đánh giá)</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {reviews.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px 0' }}>
+                Sản phẩm này chưa có đánh giá nào.
+              </div>
+            ) : (
+              reviews.map((review) => (
+                <div key={review.id} style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--color-border)', paddingBottom: '20px' }}>
+                  <img 
+                    src={review.profiles?.avatar || 'https://imgh.in/host/i0s5n9'} 
+                    alt={review.profiles?.name || 'Khách hàng'} 
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #e2e8f0' }} 
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '600', fontSize: '15px' }}>{review.profiles?.name || 'Khách hàng ẩn danh'}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                        {new Date(review.created_at).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Dịch vụ: 
+                        <div style={{ display: 'flex' }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star key={`s-${star}`} size={10} fill={star <= review.service_rating ? "#f59e0b" : "none"} color={star <= review.service_rating ? "#f59e0b" : "#cbd5e1"} />
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        Thiết bị: 
+                        <div style={{ display: 'flex' }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star key={`e-${star}`} size={10} fill={star <= review.equipment_rating ? "#f59e0b" : "none"} color={star <= review.equipment_rating ? "#f59e0b" : "#cbd5e1"} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-dark)', lineHeight: '1.5' }}>
+                      {review.comment}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

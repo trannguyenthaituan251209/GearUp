@@ -1649,15 +1649,10 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
           <p style={{ color: 'var(--color-text-muted)' }}>Khám phá đầy đủ thiết bị quay chụp chất lượng cao, tối ưu chi phí tối đa cho bạn.</p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '280px 1fr',
-          gap: '30px',
-          alignItems: 'start'
-        }} className="market-layout">
+        <div className="market-layout">
           
           {/* Sidebar Filters */}
-          <aside className="glass-panel" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none', position: 'sticky', top: '100px', zIndex: 10 }}>
+          <aside className="glass-panel market-sidebar" style={{ padding: '24px', backgroundColor: '#ffffff', border: '1px solid var(--color-border)', boxShadow: 'none', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Bộ Lọc Tìm Kiếm</h3>
               <button 

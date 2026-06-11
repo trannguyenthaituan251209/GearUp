@@ -184,6 +184,20 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const submitReview = async (reviewData) => {
+    if (!user) return { error: { message: 'Not logged in' } };
+    const newReview = {
+      ...reviewData,
+      user_id: user.id
+    };
+    try {
+      const { data, error } = await supabase.from('reviews').insert([newReview]).select();
+      return { data, error };
+    } catch (err) {
+      return { error: { message: err.message } };
+    }
+  };
+
   const fetchBanners = async () => {
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
@@ -429,6 +443,24 @@ export const StoreProvider = ({ children }) => {
     } catch (err) {
       return { error: err };
     }
+  };
+
+  // Check if email exists
+  const checkEmailExists = async (email) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        const { data, error } = await supabase.rpc('check_email_exists', { check_email: email });
+        if (error) {
+          console.warn('[Supabase RPC] Error checking email:', error);
+          return { exists: true }; // Fallback to true to prevent blocking if RPC fails
+        }
+        return { exists: data };
+      } catch (err) {
+        return { exists: true };
+      }
+    }
+    return { exists: true };
   };
 
   // Mock OTP flow using Supabase DB to maintain stability across reloads
@@ -876,6 +908,8 @@ export const StoreProvider = ({ children }) => {
         logoutUser,
         resetPassword,
         verifyRecoveryOtp,
+        checkEmailExists,
+        submitReview,
         generateAndStoreOtp,
         verifyMockOtp,
         registerPartner,

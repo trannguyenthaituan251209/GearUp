@@ -15,11 +15,60 @@ import {
   User, 
   ChevronRight,
   Sparkles,
-  Inbox
+  Inbox,
+  Star
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
-  const { user, bookings, updateBookingStatus, messages, addMessage, assets } = useContext(StoreContext);
+  const { user, bookings, updateBookingStatus, messages, addMessage, assets, submitReview } = useContext(StoreContext);
+
+  const [userReviews, setUserReviews] = useState([]);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [serviceRating, setServiceRating] = useState(5);
+  const [equipmentRating, setEquipmentRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      import('../supabaseClient').then(({ supabase }) => {
+        supabase.from('reviews').select('booking_id').eq('user_id', user.id).then(({ data }) => {
+          if (data) setUserReviews(data.map(r => r.booking_id));
+        });
+      });
+    }
+  }, [user]);
+
+  const handleReviewSubmit = async () => {
+    if (!reviewBooking) return;
+    setIsSubmittingReview(true);
+    const avg = (serviceRating + equipmentRating) / 2;
+    const res = await submitReview({
+      asset_id: reviewBooking.assetId,
+      booking_id: reviewBooking.id,
+      service_rating: serviceRating,
+      equipment_rating: equipmentRating,
+      average_rating: avg,
+      comment: reviewComment
+    });
+    setIsSubmittingReview(false);
+    if (!res.error) {
+      setUserReviews(prev => [...prev, reviewBooking.id]);
+      setReviewModalOpen(false);
+      alert('Cảm ơn bạn đã đánh giá sản phẩm!');
+    } else {
+      alert('Lỗi: ' + res.error.message);
+    }
+  };
+
+  const openReviewModal = (booking) => {
+    setReviewBooking(booking);
+    setServiceRating(5);
+    setEquipmentRating(5);
+    setReviewComment('');
+    setReviewModalOpen(true);
+  };
   const [activeTab, setActiveTab] = useState('rentals'); // 'rentals' | 'chat'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'approved' | 'returned' | 'cancelled'
   
@@ -358,6 +407,18 @@ export default function CustomerDashboard() {
                             </button>
                           </>
                         )}
+                        
+                        {booking.status === 'returned' && (
+                          userReviews.includes(booking.id) ? (
+                            <button disabled className="btn btn-sm" style={{ backgroundColor: '#e2e8f0', color: '#64748b', cursor: 'not-allowed', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle2 size={14} /> Đã Đánh Giá
+                            </button>
+                          ) : (
+                            <button onClick={() => openReviewModal(booking)} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Star size={14} /> Đánh Giá
+                            </button>
+                          )
+                        )}
 
                         <button
                           className="btn btn-outline btn-sm"
@@ -572,6 +633,71 @@ export default function CustomerDashboard() {
           }
         }
       `}</style>
+      {/* Review Modal */}
+      {reviewModalOpen && reviewBooking && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="modal-content" style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '20px', margin: 0 }}>Đánh giá sản phẩm</h3>
+              <button onClick={() => setReviewModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><XCircle size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+              <img src={reviewBooking.assetImage} alt={reviewBooking.assetTitle} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} />
+              <div style={{ fontWeight: '600' }}>{reviewBooking.assetTitle}</div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Chất lượng dịch vụ</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={`srv-${star}`} 
+                    size={28} 
+                    fill={star <= serviceRating ? "#f59e0b" : "none"} 
+                    color={star <= serviceRating ? "#f59e0b" : "#cbd5e1"} 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setServiceRating(star)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Chất lượng thiết bị</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={`eq-${star}`} 
+                    size={28} 
+                    fill={star <= equipmentRating ? "#f59e0b" : "none"} 
+                    color={star <= equipmentRating ? "#f59e0b" : "#cbd5e1"} 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setEquipmentRating(star)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>Nhận xét của bạn</label>
+              <textarea 
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm và dịch vụ của chủ cho thuê..."
+                style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+              ></textarea>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-ghost" onClick={() => setReviewModalOpen(false)}>Hủy bỏ</button>
+              <button className="btn btn-primary" onClick={handleReviewSubmit} disabled={isSubmittingReview}>
+                {isSubmittingReview ? 'Đang Gửi...' : 'Gửi Đánh Giá'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

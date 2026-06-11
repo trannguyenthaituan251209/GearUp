@@ -16,7 +16,7 @@ export default function AuthModal({ setCurrentPage }) {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
-  const { generateAndStoreOtp, verifyMockOtp } = useContext(StoreContext);
+  const { checkEmailExists, generateAndStoreOtp, verifyMockOtp } = useContext(StoreContext);
 
   if (!showAuthModal) return null;
 
@@ -60,6 +60,13 @@ export default function AuthModal({ setCurrentPage }) {
         return;
       }
       setLoading(true);
+
+      const { exists } = await checkEmailExists(email);
+      if (!exists) {
+        setErrorMsg('Email này chưa được đăng ký trong hệ thống.');
+        setLoading(false);
+        return;
+      }
 
       // --- MOCK FLOW VỚI EMAILJS + SUPABASE DB ---
       const { otp: dbOtp, error: dbError } = await generateAndStoreOtp(email);

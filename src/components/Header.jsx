@@ -6,12 +6,57 @@ export default function Header({ currentPage, setCurrentPage }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
   const {
     user,
+    assets,
     setShowAuthModal,
     setShowPartnerModal,
     logoutUser
   } = useContext(StoreContext);
+
+  const uniqueTitles = Array.from(new Set((assets || []).map(a => a.title)));
+  const searchSuggestions = uniqueTitles.filter(title => {
+    if (!searchTerm.trim()) return false;
+    const tokens = searchTerm.toLowerCase().split(/\s+/);
+    const titleLower = title.toLowerCase();
+    return tokens.every(token => titleLower.includes(token));
+  }).slice(0, 5);
+
+  const hotProducts = uniqueTitles
+    .slice(0, 3)
+    .map(title => (assets || []).find(a => a.title === title));
+
+  const highlightMatch = (text, query) => {
+    if (!query.trim()) return text;
+    const tokens = query.trim().split(/\s+/).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${tokens.join('|')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => {
+      const isMatch = tokens.some(t => part.toLowerCase() === t.replace(/\\/g, '').toLowerCase());
+      return isMatch ? (
+        <strong key={i} style={{ color: 'var(--color-primary)', fontWeight: '800' }}>
+          {part}
+        </strong>
+      ) : (
+        <span key={i}>{part}</span>
+      );
+    });
+  };
+
+  const handleSearchSubmit = (query) => {
+    if (!query.trim()) return;
+    setSearchTerm('');
+    setShowSuggestions(false);
+    // Push the state directly to trigger routing
+    window.history.pushState({ page: 'search-result', query: query }, '', `/search?q=${encodeURIComponent(query)}`);
+    // Manually dispatch a popstate event to notify App.jsx if needed, 
+    // or just call setCurrentPage. We can add setCurrentPage('search-result', query)
+    setCurrentPage('search-result', query);
+  };
 
   const getPartnerUrl = () => {
     const { protocol, host, hostname, port, pathname } = window.location;
@@ -172,6 +217,19 @@ export default function Header({ currentPage, setCurrentPage }) {
             <input
               type="text"
               placeholder="Tìm kiếm máy ảnh, ống kính..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearchSubmit(searchTerm);
+                }
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               style={{
                 width: '100%',
                 padding: '10px 20px 10px 44px',
@@ -182,6 +240,70 @@ export default function Header({ currentPage, setCurrentPage }) {
                 outline: 'none',
               }}
             />
+            {showSuggestions && (searchTerm.trim() || hotProducts.length > 0) && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                backgroundColor: '#fff', border: '1px solid var(--color-border)',
+                borderRadius: '12px', marginTop: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                zIndex: 100, overflow: 'hidden'
+              }}>
+                {/* Hot Products (Trống ô tìm kiếm) */}
+                {!searchTerm.trim() && hotProducts.length > 0 && (
+                  <div style={{ padding: '12px 0' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--color-text-muted)', padding: '0 16px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      🔥 Sản phẩm nổi bật
+                    </div>
+                    {hotProducts.map((asset, index) => (
+                      <div 
+                        key={`hot-${index}`}
+                        onClick={() => handleSearchSubmit(asset.title)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.querySelector('.hot-title').style.color = 'var(--color-primary)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.querySelector('.hot-title').style.color = 'var(--color-dark)';
+                        }}
+                      >
+                        <Search size={16} color="var(--color-text-muted)" />
+                        <img src={asset.imageUrl} alt={asset.title} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px' }} />
+                        <span className="hot-title" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-dark)', transition: 'color 0.2s' }}>{asset.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Search Suggestions */}
+                {searchTerm.trim() && (
+                  searchSuggestions.length > 0 ? (
+                    searchSuggestions.map((suggestion, index) => (
+                      <div 
+                        key={index} 
+                        onClick={() => handleSearchSubmit(suggestion)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                          cursor: 'pointer', borderBottom: '1px solid var(--color-border)',
+                          transition: 'background-color 0.2s', backgroundColor: 'transparent'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Search size={16} color="var(--color-text-muted)" />
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-dark)' }}>
+                          {highlightMatch(suggestion, searchTerm)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--color-text-muted)' }}>
+                      Không tìm thấy từ khóa nào phù hợp.
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
           <div className="header-search-keywords" style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '11px', color: 'var(--color-text-muted)', paddingLeft: '16px' }}>
             <span>Từ khóa:</span>
