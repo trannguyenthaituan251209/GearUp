@@ -12,7 +12,10 @@ export default function AccountSettings({ setCurrentPage }) {
   const [avatar, setAvatar] = useState('');
   const [citizenId, setCitizenId] = useState('');
   const [studioName, setStudioName] = useState('');
-  const [address, setAddress] = useState('');
+  
+  const savedAddress = user?.address || '';
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressCity, setAddressCity] = useState(savedAddress);
   
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -26,6 +29,26 @@ export default function AccountSettings({ setCurrentPage }) {
   const [passwordError, setPasswordError] = useState('');
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
+  // Address Suggestions
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+
+  useEffect(() => {
+    fetch('https://provinces.open-api.vn/api/?depth=2')
+      .then(res => res.json())
+      .then(data => {
+        const suggestions = [];
+        data.forEach(p => {
+          if (p.districts) {
+            p.districts.forEach(d => {
+              suggestions.push(`${d.name}, ${p.name}`);
+            });
+          }
+        });
+        setAddressSuggestions(suggestions);
+      })
+      .catch(err => console.error('Failed to fetch provinces', err));
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setCurrentPage('home');
@@ -36,7 +59,6 @@ export default function AccountSettings({ setCurrentPage }) {
     setAvatar(user.avatar || '');
     setCitizenId(user.citizenId || '');
     setStudioName(user.studioName || '');
-    setAddress(user.address || '');
   }, [user, setCurrentPage]);
 
   const handleProfileSubmit = async (e) => {
@@ -45,14 +67,16 @@ export default function AccountSettings({ setCurrentPage }) {
     setProfileError('');
     setIsSavingProfile(true);
 
-    const { error } = await updateUserProfile({
+    const updatedData = {
       name,
       phone,
       avatar,
       citizenId,
       studioName,
-      address
-    });
+      address: addressStreet ? `${addressStreet.trim()}, ${addressCity.trim()}` : addressCity.trim()
+    };
+
+    const { error } = await updateUserProfile(updatedData);
 
     setIsSavingProfile(false);
     if (error) {
@@ -183,15 +207,32 @@ export default function AccountSettings({ setCurrentPage }) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: 'var(--color-dark)' }}>Địa chỉ (Số nhà, Phường, Thành phố)</label>
-                  <input 
-                    type="text" 
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="VD: Quận 1, TP. Hồ Chí Minh"
-                    className="form-control"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', outline: 'none' }}
-                  />
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: 'var(--color-dark)' }}>Địa chỉ <span style={{color: 'red'}}>*</span></label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      value={addressStreet}
+                      onChange={(e) => setAddressStreet(e.target.value)}
+                      placeholder="Số nhà, Tên đường (VD: 123 Lê Lợi)"
+                      className="form-control"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', outline: 'none' }}
+                    />
+                    <input 
+                      type="text" 
+                      value={addressCity}
+                      onChange={(e) => setAddressCity(e.target.value)}
+                      placeholder="Phường/Xã, Quận/Huyện, Tỉnh/TP"
+                      className="form-control"
+                      required
+                      list="account-address-suggestions"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', outline: 'none' }}
+                    />
+                  </div>
+                  <datalist id="account-address-suggestions">
+                    {addressSuggestions.map((suggestion, idx) => (
+                      <option key={idx} value={suggestion} />
+                    ))}
+                  </datalist>
                 </div>
                 {user.isPartner && (
                   <div>

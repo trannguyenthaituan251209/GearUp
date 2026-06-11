@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 
@@ -41,9 +41,29 @@ export default function Register({ setCurrentPage }) {
   const [ho, setHo] = useState('');
   const [ten, setTen] = useState('');
   const [phone, setPhone] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressCity, setAddressCity] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+
+  useEffect(() => {
+    fetch('https://provinces.open-api.vn/api/?depth=2')
+      .then(res => res.json())
+      .then(data => {
+        const suggestions = [];
+        data.forEach(p => {
+          if (p.districts) {
+            p.districts.forEach(d => {
+              suggestions.push(`${d.name}, ${p.name}`);
+            });
+          }
+        });
+        setAddressSuggestions(suggestions);
+      })
+      .catch(err => console.error('Failed to fetch provinces', err));
+  }, []);
   
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,6 +91,12 @@ export default function Register({ setCurrentPage }) {
       }
       setStep(3);
     } else if (step === 3) {
+      if (!addressCity.trim()) {
+        setErrorMsg('Vui lòng nhập đầy đủ Quận, Thành phố!');
+        return;
+      }
+      setStep(4);
+    } else if (step === 4) {
       if (!email.trim()) {
         setErrorMsg('Vui lòng nhập email!');
         return;
@@ -80,7 +106,7 @@ export default function Register({ setCurrentPage }) {
         setErrorMsg('Địa chỉ email không hợp lệ!');
         return;
       }
-      setStep(4);
+      setStep(5);
     }
   };
 
@@ -108,7 +134,8 @@ export default function Register({ setCurrentPage }) {
     
     // Concatenate full name from Ho and Ten
     const fullName = `${ho.trim()} ${ten.trim()}`;
-    const { error } = await signUpUser(email, password, fullName, phone);
+    const fullAddress = addressStreet.trim() ? `${addressStreet.trim()}, ${addressCity.trim()}` : addressCity.trim();
+    const { error } = await signUpUser(email, password, fullName, phone, fullAddress);
     setLoading(false);
     
     if (error) {
@@ -177,7 +204,7 @@ export default function Register({ setCurrentPage }) {
               color: 'var(--color-dark)',
               fontFamily: 'var(--font-primary)'
             }}>
-              {step === 4 ? 'BƯỚC CUỐI CÙNG' : 'ĐĂNG KÝ TÀI KHOẢN'}
+              {step === 5 ? 'BƯỚC CUỐI CÙNG' : 'ĐĂNG KÝ TÀI KHOẢN'}
             </h1>
           </div>
 
@@ -200,7 +227,7 @@ export default function Register({ setCurrentPage }) {
           )}
 
           {/* Form Content */}
-          <form onSubmit={step === 4 ? handleRegister : handleNextStep} style={{ display: 'flex', flexDirection: 'column' }}>
+          <form onSubmit={step === 5 ? handleRegister : handleNextStep} style={{ display: 'flex', flexDirection: 'column' }}>
             
             {/* Step 1: Name Field */}
             {step === 1 && (
@@ -257,8 +284,46 @@ export default function Register({ setCurrentPage }) {
               </div>
             )}
 
-            {/* Step 3: Email Field */}
+            {/* Step 3: Address Field */}
             {step === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <span style={{ fontSize: '15px', color: 'var(--color-text-main)', fontWeight: '600' }}>
+                  Địa chỉ hiện tại của bạn
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <input 
+                    type="text" 
+                    className="form-control register-input"
+                    placeholder="Số nhà, Tên đường (VD: 123 Lê Lợi)"
+                    value={addressStreet}
+                    onChange={(e) => setAddressStreet(e.target.value)}
+                    autoFocus
+                    style={{ height: '52px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '15px', width: '100%' }}
+                  />
+                  <input 
+                    type="text" 
+                    className="form-control register-input"
+                    placeholder="Phường/Xã, Quận/Huyện, Tỉnh/TP"
+                    value={addressCity}
+                    onChange={(e) => setAddressCity(e.target.value)}
+                    required
+                    list="address-suggestions"
+                    style={{ height: '52px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '15px', width: '100%' }}
+                  />
+                  <datalist id="address-suggestions">
+                    {addressSuggestions.map((suggestion, idx) => (
+                      <option key={idx} value={suggestion} />
+                    ))}
+                  </datalist>
+                  <p style={{fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px'}}>
+                    * Bắt buộc: Giúp chúng tôi ưu tiên gợi ý các thiết bị ở gần bạn nhất.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Email Field */}
+            {step === 4 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <span style={{ fontSize: '15px', color: 'var(--color-text-main)', fontWeight: '600' }}>
                   Hãy cho chúng tôi biết email của bạn
@@ -278,8 +343,8 @@ export default function Register({ setCurrentPage }) {
               </div>
             )}
 
-            {/* Step 4: Password Fields */}
-            {step === 4 && (
+            {/* Step 5: Password Fields */}
+            {step === 5 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div>
                   <span style={{ fontSize: '15px', color: 'var(--color-text-main)', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
@@ -354,7 +419,7 @@ export default function Register({ setCurrentPage }) {
                 }}
                 className="next-step-btn"
               >
-                {loading ? 'Đang xử lý...' : (step === 4 ? 'Hoàn thành' : 'Bước tiếp theo')}
+                {loading ? 'Đang xử lý...' : (step === 5 ? 'Hoàn thành' : 'Bước tiếp theo')}
               </button>
             </div>
 

@@ -344,7 +344,7 @@ export const StoreProvider = ({ children }) => {
 
 
   // Auth Functions
-  const signUpUser = async (email, password, name, phone = '') => {
+  const signUpUser = async (email, password, name, phone = '', address = '') => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -353,6 +353,7 @@ export const StoreProvider = ({ children }) => {
           data: {
             name,
             phone,
+            address,
             avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
           }
         }
@@ -400,6 +401,79 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const resetPassword = async (email) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      return { error };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+
+  const verifyRecoveryOtp = async (email, token, newPassword) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'recovery'
+      });
+      if (error) return { error };
+      
+      // If successful, user is signed in. Update password:
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (updateError) return { error: updateError };
+      
+      return { data, error: null };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+
+  // Mock OTP flow using Supabase DB to maintain stability across reloads
+  const generateAndStoreOtp = async (email) => {
+    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+       const { error } = await supabase.from('otp_requests').insert([{
+         email,
+         otp: mockOtp,
+         expires_at: expiresAt
+       }]);
+       if (error) {
+         return { otp: null, error };
+       }
+    }
+    return { otp: mockOtp, error: null };
+  };
+
+  const verifyMockOtp = async (email, otpInput) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      const { data, error } = await supabase
+        .from('otp_requests')
+        .select('*')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) return { isValid: false, error: error || new Error('Không tìm thấy OTP') };
+      
+      if (new Date() > new Date(data.expires_at)) {
+        return { isValid: false, error: new Error('Mã OTP đã hết hạn.') };
+      }
+      if (data.otp !== otpInput) {
+        return { isValid: false, error: new Error('Mã OTP không chính xác.') };
+      }
+      return { isValid: true, error: null };
+    }
+    return { isValid: true, error: null }; // Fallback if no supabase
+  };
+
   const logoutUser = async () => {
     try {
       await supabase.auth.signOut();
@@ -442,8 +516,7 @@ export const StoreProvider = ({ children }) => {
         phone: updatedUser.phone,
         avatar: updatedUser.avatar,
         citizen_id: updatedUser.citizenId,
-        studio_name: updatedUser.studioName,
-        address: updatedUser.address
+        studio_name: updatedUser.studioName
       }).eq('id', user.id);
       
       if (error) {
@@ -801,6 +874,10 @@ export const StoreProvider = ({ children }) => {
         signUpUser,
         loginUser,
         logoutUser,
+        resetPassword,
+        verifyRecoveryOtp,
+        generateAndStoreOtp,
+        verifyMockOtp,
         registerPartner,
         approvePartner,
         rejectPartner,
