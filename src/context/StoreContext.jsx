@@ -775,7 +775,7 @@ export const StoreProvider = ({ children }) => {
       id: `msg-${Date.now()}`,
       assetId,
       assetTitle,
-      senderName: user?.name || senderName,
+      senderName: senderName || user?.name,
       text,
       timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     };

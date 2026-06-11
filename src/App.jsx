@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { StoreProvider } from './context/StoreContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -19,6 +20,7 @@ import GearMember from './pages/GearMember';
 import SearchResult from './pages/SearchResult';
 import PartnerProfile from './pages/PartnerProfile';
 import AuthModal from './components/AuthModal';
+import CskhChatModal from './components/CskhChatModal';
 
 function MainAppContent() {
   const isPartnerPortal = 
@@ -30,6 +32,7 @@ function MainAppContent() {
     window.location.search.includes('portal=admin');
   const [currentPage, setInternalPage] = useState('home');
   const [selectedAssetId, setInternalAssetId] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Sync state to URL and history
   const setCurrentPage = (page, assetId = null) => {
@@ -215,6 +218,36 @@ function MainAppContent() {
         {renderPage()}
       </main>
       <Footer setCurrentPage={setCurrentPage} />
+
+      {/* CSKH Floating Button */}
+      <button 
+        onClick={() => setIsChatOpen(!isChatOpen)}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          backgroundColor: 'var(--color-primary)',
+          color: '#ffffff',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          textDecoration: 'none',
+          boxShadow: 'none',
+          border: 'none',
+          outline: 'none',
+          transition: 'none',
+          cursor: 'pointer'
+        }}
+        title="Nhắn tin cho bộ phận chăm sóc khách hàng"
+      >
+        <MessageCircle size={28} />
+      </button>
+
+      <CskhChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
       {/* Global Modals */}
       <AuthModal setCurrentPage={setCurrentPage} />
