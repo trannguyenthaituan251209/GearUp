@@ -10,9 +10,9 @@ export function formatPrice(price) {
 
 export default function AssetCard({ asset, onSelect }) {
   const { title, category, pricePerDay, imageUrl, location, rating, status } = asset;
-  const { user, toggleFavorite } = useContext(StoreContext);
+  const { user, favorites = [], toggleFavorite } = useContext(StoreContext);
   
-  const isFavorited = user?.favorites?.includes(asset.id);
+  const isFavorited = favorites.includes(asset.id);
 
   const getCategoryName = (cat) => {
     switch (cat) {

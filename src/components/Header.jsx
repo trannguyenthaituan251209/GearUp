@@ -8,14 +8,21 @@ export default function Header({ currentPage, setCurrentPage }) {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   
   const {
     user,
     assets,
+    favorites = [],
+    notifications = [],
+    markNotificationAsRead,
     setShowAuthModal,
     setShowPartnerModal,
     logoutUser
   } = useContext(StoreContext);
+
+  const unreadNotifs = notifications.filter(n => !n.isRead).length;
 
   const uniqueTitles = Array.from(new Set((assets || []).map(a => a.title)));
   const searchSuggestions = uniqueTitles.filter(title => {
@@ -315,17 +322,98 @@ export default function Header({ currentPage, setCurrentPage }) {
 
         {/* Actions */}
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Icons: Notification and Cart */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderRight: '1px solid var(--color-border)', paddingRight: '16px' }}>
-            <div style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}>
+          {user && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderRight: '1px solid var(--color-border)', paddingRight: '16px', position: 'relative' }}>
+            {/* Bell Icon */}
+            <div 
+              style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} 
+              onClick={() => { setIsNotificationsOpen(!isNotificationsOpen); setIsFavoritesOpen(false); setIsUserMenuOpen(false); }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'} 
+              onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}
+            >
               <Bell size={22} />
-              <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>3</span>
+              {unreadNotifs > 0 && (
+                <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>{unreadNotifs}</span>
+              )}
             </div>
-            <div style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}>
-              <ShoppingCart size={22} />
-              <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>1</span>
+
+            {/* Notifications Dropdown */}
+            {isNotificationsOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', right: '40px', marginTop: '16px', width: '320px', backgroundColor: '#fff', border: '1px solid var(--color-border)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '400px'
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', fontWeight: '600', fontSize: '14px', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Thông báo {unreadNotifs > 0 && <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '10px' }}>{unreadNotifs} mới</span>}
+                </div>
+                <div className="no-scrollbar" style={{ overflowY: 'auto', flex: 1 }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Không có thông báo nào.</div>
+                  ) : (
+                    notifications.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        onClick={() => { if (!notif.isRead) markNotificationAsRead(notif.id); }}
+                        style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: notif.isRead ? '#ffffff' : '#f0f9ff', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '4px' }}
+                        onMouseOver={(e) => { if (notif.isRead) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                        onMouseOut={(e) => { if (notif.isRead) e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '13px', fontWeight: notif.isRead ? '500' : '600', color: 'var(--color-dark)' }}>{notif.title}</span>
+                          {!notif.isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6', marginTop: '4px', flexShrink: 0 }}></span>}
+                        </div>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-main)', lineHeight: '1.4' }}>{notif.message}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Heart Icon (Favorites) */}
+            <div 
+              style={{ position: 'relative', cursor: 'pointer', color: 'var(--color-text-main)', transition: 'color 0.2s' }} 
+              onClick={() => { setIsFavoritesOpen(!isFavoritesOpen); setIsNotificationsOpen(false); setIsUserMenuOpen(false); }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'} 
+              onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}
+            >
+              <Heart size={22} fill={favorites.length > 0 ? '#ef4444' : 'none'} color={favorites.length > 0 ? '#ef4444' : 'currentColor'} />
+              {favorites.length > 0 && (
+                <span style={{ position: 'absolute', top: '-6px', right: '-8px', backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', borderRadius: '12px', padding: '1px 5px', border: '1.5px solid #ffffff' }}>{favorites.length}</span>
+              )}
             </div>
+
+            {/* Favorites Dropdown */}
+            {isFavoritesOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', right: '0', marginTop: '16px', width: '320px', backgroundColor: '#fff', border: '1px solid var(--color-border)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 1000, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '400px'
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', fontWeight: '600', fontSize: '14px', backgroundColor: '#fff0f2', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Heart size={16} fill="#be123c" /> Thiết bị yêu thích
+                </div>
+                <div className="no-scrollbar" style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
+                  {favorites.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Chưa có thiết bị yêu thích nào.</div>
+                  ) : (
+                    favorites.map(favId => {
+                      const asset = (assets || []).find(a => a.id === favId);
+                      if (!asset) return null;
+                      return (
+                        <div key={asset.id} onClick={() => { setIsFavoritesOpen(false); setCurrentPage('asset-detail', asset); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <img src={asset.imageUrl} alt={asset.title} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.title}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: '600', marginTop: '2px' }}>{asset.pricePerDay.toLocaleString()}đ/ngày</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+          )}
 
           {!user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -355,7 +443,7 @@ export default function Header({ currentPage, setCurrentPage }) {
             <div style={{ position: 'relative' }}>
               <div 
                 style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px', borderLeft: '1px solid var(--color-border)', cursor: 'pointer' }}
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsNotificationsOpen(false); setIsFavoritesOpen(false); }}
               >
                 <img
                   src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}

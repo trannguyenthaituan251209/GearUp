@@ -161,6 +161,21 @@ export const StoreProvider = ({ children }) => {
   const [bookings, setBookings] = useState([]);
   const [messages, setMessages] = useState([]);
   const [currentCheckout, setCurrentCheckout] = useState(null);
+  
+  // Favorites & Notifications States
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const cached = localStorage.getItem('gearup_favorites');
+      const parsedCached = cached ? JSON.parse(cached) : [];
+      const userCachedStr = localStorage.getItem('gearup_current_user');
+      const userCached = userCachedStr ? JSON.parse(userCachedStr) : null;
+      const legacyFavs = userCached?.favorites || [];
+      return Array.from(new Set([...parsedCached, ...legacyFavs]));
+    } catch {
+      return [];
+    }
+  });
+  const [notifications, setNotifications] = useState([]);
 
   // Auth States
   const [user, setUser] = useState(null);
@@ -352,8 +367,48 @@ export const StoreProvider = ({ children }) => {
       setBookings(bookingsFetched || []);
       setMessages(messagesFetched || []);
     };
+    
+    const fetchUserData = async () => {
+      const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+      if (isRealSupabase && user) {
+        // Fetch Favorites
+        try {
+          const { data: favData, error: favErr } = await supabase.from('favorites').select('asset_id').eq('user_id', user.email);
+          if (!favErr && favData) {
+            const fetchedFavs = favData.map(f => f.asset_id);
+            setFavorites(fetchedFavs);
+            localStorage.setItem('gearup_favorites', JSON.stringify(fetchedFavs));
+          }
+        } catch (err) { console.warn('Fav fetch error', err); }
+        
+        // Fetch Notifications
+        try {
+          const { data: notifData, error: notifErr } = await supabase.from('notifications')
+            .select('*')
+            .in('user_id', [user.email, 'all'])
+            .order('created_at', { ascending: false });
+          if (!notifErr && notifData) {
+            setNotifications(notifData.map(n => ({
+              id: n.id,
+              userId: n.user_id,
+              title: n.title,
+              message: n.message,
+              type: n.type,
+              isRead: n.is_read,
+              createdAt: n.created_at
+            })));
+          }
+        } catch (err) { console.warn('Notif fetch error', err); }
+      } else if (user === null && !localStorage.getItem('gearup_current_user')) {
+        // Only clear if explicitly logged out (no cached user)
+        setFavorites([]);
+        setNotifications([]);
+      }
+    };
+
     fetchDB();
-  }, [user]);
+    fetchUserData();
+  }, [user?.id, user?.email]);
 
 
 
@@ -893,6 +948,48 @@ export const StoreProvider = ({ children }) => {
     setBanners(prev => prev.filter(b => b.id !== id));
   };
 
+  const toggleFavorite = async (assetId) => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để lưu thiết bị yêu thích!");
+      setShowAuthModal(true);
+      return false;
+    }
+    
+    const isFav = favorites.includes(assetId);
+    const newFavorites = isFav ? favorites.filter(id => id !== assetId) : [...favorites, assetId];
+    
+    setFavorites(newFavorites);
+    localStorage.setItem('gearup_favorites', JSON.stringify(newFavorites));
+
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        if (isFav) {
+          const {error} = await supabase.from('favorites').delete().eq('user_id', user.email).eq('asset_id', assetId);
+          if (error) console.warn('DB delete fav error:', error);
+        } else {
+          const {error} = await supabase.from('favorites').insert([{ user_id: user.email, asset_id: assetId }]);
+          if (error) console.warn('DB insert fav error:', error);
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to toggle favorite:', err);
+      }
+    }
+    return !isFav;
+  };
+
+  const markNotificationAsRead = async (notifId) => {
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        await supabase.from('notifications').update({ is_read: true }).eq('id', notifId);
+      } catch (err) {
+        console.warn('[Supabase] Failed to mark notif as read:', err);
+      }
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -900,6 +997,10 @@ export const StoreProvider = ({ children }) => {
         bookings,
         messages,
         user,
+        favorites,
+        notifications,
+        toggleFavorite,
+        markNotificationAsRead,
         showAuthModal,
         setShowAuthModal,
         showPartnerModal,
@@ -935,18 +1036,7 @@ export const StoreProvider = ({ children }) => {
         updateAssetDetails,
         currentCheckout,
         setCurrentCheckout,
-        updateUserProfile,
-        toggleFavorite: async (assetId) => {
-          if (!user) {
-            alert('Vui lòng đăng nhập để thêm vào danh sách yêu thích!');
-            return;
-          }
-          const isFavorited = user.favorites?.includes(assetId);
-          const newFavorites = isFavorited 
-            ? user.favorites.filter(id => id !== assetId)
-            : [...(user.favorites || []), assetId];
-          await updateUserProfile({ favorites: newFavorites });
-        }
+        updateUserProfile
       }}
     >
       {children}

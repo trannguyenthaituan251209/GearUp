@@ -5,7 +5,7 @@ import AssetCard, { formatPrice } from '../components/AssetCard';
 import { ArrowLeft, MessageSquare, Heart, Star, User } from 'lucide-react';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
-  const { assets, addMessage, messages, user, setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
+  const { assets, addMessage, messages, user, favorites = [], setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
 
@@ -39,7 +39,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
 
   // Find asset
   const asset = assets.find((a) => a.id === assetId);
-  const isFavorited = user?.favorites?.includes(asset?.id);
+  const isFavorited = favorites.includes(asset?.id);
 
   const [realOwnerName, setRealOwnerName] = useState(null);
   const [realOwnerAvatar, setRealOwnerAvatar] = useState(null);
