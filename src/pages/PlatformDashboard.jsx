@@ -1623,7 +1623,7 @@ export default function PlatformDashboard() {
                 };
               }
               const text = m.text || '';
-              if (m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !text.includes('[ASSIGNED]')) {
+              if (m.senderName !== 'Admin CSKH' && m.senderName !== 'Hệ thống' && m.senderName !== 'GearUp AI' && !text.includes('[ASSIGNED]') && !text.startsWith('[RESOLVED]')) {
                 conversationsMap[uId].userName = m.senderName;
               }
               if (text.startsWith('[ASSIGNED]')) {
@@ -1641,9 +1641,14 @@ export default function PlatformDashboard() {
             // Filter out AI messages for each conversation
             Object.values(conversationsMap).forEach(conv => {
               let lastRequestIndex = -1;
+              let lastResolvedIndex = -1;
               conv.messages.forEach((m, idx) => {
-                if ((m.text || '').includes('[CẦN CSKH]')) lastRequestIndex = idx;
+                const text = m.text || '';
+                if (text.includes('[CẦN CSKH]')) lastRequestIndex = idx;
+                if (text.startsWith('[RESOLVED]')) lastResolvedIndex = idx;
               });
+              
+              conv.isResolved = lastResolvedIndex > lastRequestIndex;
 
               if (lastRequestIndex !== -1) {
                  conv.messages = conv.messages.slice(lastRequestIndex);
@@ -1655,8 +1660,10 @@ export default function PlatformDashboard() {
             });
             
             const calculateSlaStatus = (conv) => {
-              const userMessages = conv.messages.filter(m => m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !(m.text || '').startsWith('[ASSIGNED]'));
-              const lastAdminMessage = conv.messages.slice().reverse().find(m => m.senderName === 'Admin CSKH' || (m.text || '').startsWith('[ASSIGNED]'));
+              if (conv.isResolved) return { type: 'none' };
+
+              const userMessages = conv.messages.filter(m => m.senderName !== 'Admin CSKH' && m.senderName !== 'Hệ thống' && m.senderName !== 'GearUp AI' && !(m.text || '').startsWith('[ASSIGNED]') && !(m.text || '').startsWith('[RESOLVED]'));
+              const lastAdminMessage = conv.messages.slice().reverse().find(m => m.senderName === 'Admin CSKH' || m.senderName === 'Hệ thống' || (m.text || '').startsWith('[ASSIGNED]') || (m.text || '').startsWith('[RESOLVED]'));
               const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
 
               if (!lastUserMessage) return { type: 'none' };
@@ -1676,14 +1683,18 @@ export default function PlatformDashboard() {
             };
 
             const unassignedList = Object.values(conversationsMap)
-              .filter(conv => conv.messages.some(m => (m.text || '').includes('[CẦN CSKH]')) && !conv.assignee)
+              .filter(conv => !conv.isResolved && conv.messages.some(m => (m.text || '').includes('[CẦN CSKH]')) && !conv.assignee)
               .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
             
             const myAssignedList = Object.values(conversationsMap)
-              .filter(conv => conv.assignee === user?.name || (conv.assignee === 'Admin CSKH' && user))
+              .filter(conv => !conv.isResolved && (conv.assignee === user?.name || (conv.assignee === 'Admin CSKH' && user)))
               .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
 
-            const conversationsList = cskhTab === 'unassigned' ? unassignedList : myAssignedList;
+            const historyList = Object.values(conversationsMap)
+              .filter(conv => conv.isResolved)
+              .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
+
+            const conversationsList = cskhTab === 'unassigned' ? unassignedList : (cskhTab === 'mine' ? myAssignedList : historyList);
             const selectedConv = selectedCskhUserId ? conversationsMap[selectedCskhUserId] : null;
 
             const handleAcceptTicket = () => {
@@ -1706,15 +1717,21 @@ export default function PlatformDashboard() {
                   <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
                     <div 
                       onClick={() => setCskhTab('unassigned')}
-                      style={{ flex: 1, padding: '16px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', borderBottom: cskhTab === 'unassigned' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'unassigned' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
+                      style={{ flex: 1, padding: '12px 8px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', fontSize: '13px', borderBottom: cskhTab === 'unassigned' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'unassigned' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
                     >
-                      Hộp thư chung ({unassignedList.length})
+                      Hộp thư ({unassignedList.length})
                     </div>
                     <div 
                       onClick={() => setCskhTab('mine')}
-                      style={{ flex: 1, padding: '16px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', borderBottom: cskhTab === 'mine' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'mine' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
+                      style={{ flex: 1, padding: '12px 8px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', fontSize: '13px', borderBottom: cskhTab === 'mine' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'mine' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
                     >
                       Của tôi ({myAssignedList.length})
+                    </div>
+                    <div 
+                      onClick={() => setCskhTab('history')}
+                      style={{ flex: 1, padding: '12px 8px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', fontSize: '13px', borderBottom: cskhTab === 'history' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'history' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
+                    >
+                      Lịch sử ({historyList.length})
                     </div>
                   </div>
                   <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -1769,7 +1786,7 @@ export default function PlatformDashboard() {
                     <>
                       <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', fontWeight: '600', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>Đang hỗ trợ: {selectedConv.userName}</div>
-                        {selectedConv.assignee && (
+                        {selectedConv.assignee && !selectedConv.isResolved && (
                           <button
                             onClick={() => {
                               addMessage(`cskh-${selectedConv.userId}`, 'Hỗ trợ Khách hàng', 'Hệ thống', `[RESOLVED] Cuộc hội thoại đã được đóng bởi ${user?.name}`);
@@ -1813,6 +1830,10 @@ export default function PlatformDashboard() {
                             >
                               Tiếp nhận xử lý
                             </button>
+                          </div>
+                        ) : selectedConv.isResolved ? (
+                          <div style={{ color: '#10b981', textAlign: 'center', fontSize: '14px', fontWeight: '500' }}>
+                            Cuộc hội thoại này đã được kết thúc.
                           </div>
                         ) : selectedConv.assignee !== user?.name && selectedConv.assignee !== 'Admin CSKH' ? (
                           <div style={{ color: '#ef4444', textAlign: 'center', fontSize: '14px', fontWeight: '500' }}>
