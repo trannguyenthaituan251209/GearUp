@@ -267,7 +267,9 @@ export const StoreProvider = ({ children }) => {
             citizenId: (useCache ? cachedUser.citizenId : null) || metadata.citizenId || '',
             studioName: (useCache ? cachedUser.studioName : null) || metadata.studioName || '',
             address: (useCache ? cachedUser.address : null) || metadata.address || '',
-            favorites: (useCache ? cachedUser.favorites : null) || metadata.favorites || []
+            favorites: (useCache ? cachedUser.favorites : null) || metadata.favorites || [],
+            subscriptionTier: (useCache ? cachedUser.subscriptionTier : null) || metadata.subscriptionTier || 'free',
+            subscriptionEnd: (useCache ? cachedUser.subscriptionEnd : null) || metadata.subscriptionEnd || null
           };
 
           // Cache the verified user session details
@@ -314,7 +316,9 @@ export const StoreProvider = ({ children }) => {
                   citizenId: data.citizen_id || prev.citizenId,
                   studioName: data.studio_name || prev.studioName,
                   address: data.address || prev.address,
-                  favorites: prev.favorites || []
+                  favorites: prev.favorites || [],
+                  subscriptionTier: data.subscription_tier || prev.subscriptionTier || 'free',
+                  subscriptionEnd: data.subscription_end || prev.subscriptionEnd || null
                 };
                 localStorage.setItem('gearup_current_user', JSON.stringify(merged));
                 return merged;
@@ -1018,6 +1022,38 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const updateUserSubscription = async (tier) => {
+    if (!user) return;
+    
+    // Set expiry to 30 days from now
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    const endStr = expiryDate.toISOString();
+
+    const updatedUser = { 
+      ...user, 
+      subscriptionTier: tier, 
+      subscriptionEnd: endStr 
+    };
+
+    // Update locally
+    setUser(updatedUser);
+    localStorage.setItem('gearup_current_user', JSON.stringify(updatedUser));
+
+    // Optional: Update DB if it has the fields
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase && user.id && !user.id.startsWith('user-')) {
+      try {
+        await supabase.from('profiles').update({ 
+          subscription_tier: tier,
+          subscription_end: endStr
+        }).eq('id', user.id);
+      } catch (err) {
+        console.log('Skipped DB profile update for subscription (columns might not exist yet)', err);
+      }
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -1029,6 +1065,7 @@ export const StoreProvider = ({ children }) => {
         notifications,
         toggleFavorite,
         markNotificationAsRead,
+        updateUserSubscription,
         showAuthModal,
         setShowAuthModal,
         showPartnerModal,

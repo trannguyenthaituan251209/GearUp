@@ -450,8 +450,14 @@ export default function Header({ currentPage, setCurrentPage }) {
                   alt={user.name}
                   style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                 />
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-dark)' }} className="user-name-display">
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-dark)', display: 'flex', alignItems: 'center', gap: '4px' }} className="user-name-display">
                   {user.name.split(' ').pop()}
+                  {user.subscriptionTier === 'gold' && (
+                    <span style={{ backgroundColor: '#fefce8', color: '#ca8a04', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', border: '1px solid #fde047', marginLeft: '2px' }}>GOLD</span>
+                  )}
+                  {user.subscriptionTier === 'silver' && (
+                    <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', border: '1px solid #cbd5e1', marginLeft: '2px' }}>SILVER</span>
+                  )}
                 </span>
               </div>
 
@@ -475,9 +481,15 @@ export default function Header({ currentPage, setCurrentPage }) {
                   </div>
                   
                   <div style={{ padding: '8px 0' }}>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('gear-member'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: '#ca8a04', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s', fontWeight: '600' }} onMouseOver={(e) => e.target.style.backgroundColor = '#fefce8'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
-                      <Crown size={16} color="#eab308" fill="#fef08a" /> Đăng ký GearMember
-                    </a>
+                    {(!user.subscriptionTier || user.subscriptionTier === 'free') ? (
+                      <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('gear-member'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: '#ca8a04', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s', fontWeight: '600' }} onMouseOver={(e) => e.target.style.backgroundColor = '#fefce8'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                        <Crown size={16} color="#eab308" fill="#fef08a" /> Đăng ký GearMember
+                      </a>
+                    ) : (
+                      <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('gear-member'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: '#10b981', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s', fontWeight: '600' }} onMouseOver={(e) => e.target.style.backgroundColor = '#ecfdf5'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
+                        <Crown size={16} color="#10b981" /> Gói Hội Viên ({user.subscriptionTier.toUpperCase()})
+                      </a>
+                    )}
                     <a href="#" onClick={(e) => { e.preventDefault(); setIsUserMenuOpen(false); setCurrentPage('account-settings'); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: 'var(--color-text-main)', textDecoration: 'none', fontSize: '13px', transition: 'background 0.2s' }} onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-light)'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>
                       <Settings size={16} /> Cài đặt tài khoản
                     </a>

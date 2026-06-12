@@ -1616,7 +1616,7 @@ export default function PlatformDashboard() {
               if (!conversationsMap[uId]) {
                 conversationsMap[uId] = {
                   userId: uId,
-                  userName: m.senderName !== 'Admin CSKH' ? m.senderName : 'Khách hàng', // fallback if first msg is admin
+                  userName: m.senderName !== 'Admin CSKH' ? m.senderName : 'Khách hàng',
                   lastMsgDate: m.timestamp,
                   messages: [],
                   assignee: null
@@ -1638,25 +1638,38 @@ export default function PlatformDashboard() {
               conversationsMap[uId].lastMsgDate = m.timestamp;
             });
             
-            // Filter out AI messages for each conversation
+            // Filter out AI messages chronologically
             Object.values(conversationsMap).forEach(conv => {
-              let lastRequestIndex = -1;
-              let lastResolvedIndex = -1;
-              conv.messages.forEach((m, idx) => {
-                const text = m.text || '';
-                if (text.includes('[CẦN CSKH]')) lastRequestIndex = idx;
-                if (text.startsWith('[RESOLVED]')) lastResolvedIndex = idx;
-              });
-              
-              conv.isResolved = lastResolvedIndex > lastRequestIndex;
+              let isHuman = false;
+              let hasUnresolvedRequest = false;
+              const visibleMessages = [];
 
-              if (lastRequestIndex !== -1) {
-                 conv.messages = conv.messages.slice(lastRequestIndex);
-              } else if (!conv.assignee) {
+              conv.messages.forEach((m) => {
+                const text = m.text || '';
+                
+                if (text.includes('[CẦN CSKH]') || text.includes('[ASSIGNED]') || m.senderName === 'Admin CSKH') {
+                  isHuman = true;
+                  hasUnresolvedRequest = true;
+                }
+                if (text.startsWith('[RESOLVED]')) {
+                  isHuman = false;
+                  hasUnresolvedRequest = false;
+                }
+
+                if (isHuman) {
+                   if (m.senderName !== 'GearUp AI') {
+                      visibleMessages.push(m);
+                   }
+                }
+              });
+
+              conv.isResolved = !hasUnresolvedRequest && conv.messages.some(m => (m.text || '').startsWith('[RESOLVED]'));
+
+              if (!hasUnresolvedRequest && !conv.assignee && !conv.isResolved) {
                  conv.messages = [];
+              } else {
+                 conv.messages = visibleMessages;
               }
-              
-              conv.messages = conv.messages.filter(m => m.senderName !== 'GearUp AI');
             });
             
             const calculateSlaStatus = (conv) => {
@@ -1806,15 +1819,25 @@ export default function PlatformDashboard() {
                           return m.senderName !== 'GearUp AI' && !text.startsWith('[ASSIGNED]') && !text.startsWith('[RESOLVED]');
                         }).map(msg => {
                           const isAdmin = msg.senderName === 'Admin CSKH';
+                          const rawText = msg.text || '';
+                          const isRequest = rawText.includes('[CẦN CSKH]');
+                          const displayText = rawText.replace('[CẦN CSKH]', '').trim();
                           
                           return (
                             <div key={msg.id} style={{ alignSelf: isAdmin ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
                               <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px', textAlign: isAdmin ? 'right' : 'left' }}>
                                 {msg.senderName} • {msg.timestamp}
                               </div>
-                              <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: isAdmin ? 'var(--color-primary)' : '#ffffff', color: isAdmin ? '#ffffff' : '#0f172a', border: isAdmin ? 'none' : '1px solid #e2e8f0', fontSize: '14px', lineHeight: '1.5', borderBottomRightRadius: isAdmin ? '4px' : '16px', borderBottomLeftRadius: isAdmin ? '16px' : '4px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                                {(msg.text || '').replace('[CẦN CSKH]', '').trim()}
-                              </div>
+                              {isRequest && !displayText && (
+                                <div style={{ padding: '8px 16px', borderRadius: '16px', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', fontSize: '13px', fontStyle: 'italic', marginBottom: displayText ? '8px' : '0' }}>
+                                  👋 Khách hàng yêu cầu gặp nhân viên CSKH
+                                </div>
+                              )}
+                              {displayText && (
+                                <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: isAdmin ? 'var(--color-primary)' : '#ffffff', color: isAdmin ? '#ffffff' : '#0f172a', border: isAdmin ? 'none' : '1px solid #e2e8f0', fontSize: '14px', lineHeight: '1.5', borderBottomRightRadius: isAdmin ? '4px' : '16px', borderBottomLeftRadius: isAdmin ? '16px' : '4px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                  {displayText}
+                                </div>
+                              )}
                             </div>
                           );
                         })}

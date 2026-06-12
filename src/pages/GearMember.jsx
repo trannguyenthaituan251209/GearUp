@@ -1,16 +1,42 @@
-import React from 'react';
-import { ArrowLeft, Check, Crown, Star, Shield } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { ArrowLeft, Check, Crown, Star, Shield, CreditCard } from 'lucide-react';
+import { StoreContext } from '../context/StoreContext';
+import SubscriptionCheckout from '../components/SubscriptionCheckout';
 
 export default function GearMember({ setCurrentPage }) {
+  const { user, updateUserSubscription, setShowAuthModal } = useContext(StoreContext);
+  const [showPayment, setShowPayment] = useState(false);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubscribe = (tier) => {
+    if (!user) {
+      alert('Vui lòng đăng nhập để đăng ký gói hội viên!');
+      setShowAuthModal(true);
+      return;
+    }
+    if (user.subscriptionTier === tier.id) {
+      alert(`Bạn đang sử dụng gói ${tier.name} rồi!`);
+      return;
+    }
+    setSelectedTier(tier);
+    setShowPayment(true);
+  };
+
+  const processPayment = () => {
+    updateUserSubscription(selectedTier.id);
+    setShowPayment(false);
+  };
   const tiers = [
     {
+      id: 'free',
       name: 'Khách Thuê Thường (Free)',
       price: 'Miễn phí',
       priceDetail: '',
       icon: <UserIcon />,
       color: 'var(--color-text-muted)',
       bg: '#f8fafc',
-      buttonText: 'Gói hiện tại',
+      buttonText: user?.subscriptionTier === 'free' ? 'Đang sử dụng' : 'Gói mặc định',
       buttonClass: 'btn-outline',
       features: [
         'Giá gốc trên ứng dụng',
@@ -19,13 +45,14 @@ export default function GearMember({ setCurrentPage }) {
       ]
     },
     {
+      id: 'silver',
       name: 'Hội Viên Bạc (Silver Pass)',
       price: '149.000 VNĐ',
       priceDetail: '/ tháng',
       icon: <Shield style={{ color: '#94a3b8' }} size={28} />,
       color: '#64748b',
       bg: '#f1f5f9',
-      buttonText: 'Nâng cấp Silver',
+      buttonText: user?.subscriptionTier === 'silver' ? 'Đang sử dụng' : 'Nâng cấp Silver',
       buttonClass: 'btn-primary',
       features: [
         'Tất cả các quyền lợi của gói Free',
@@ -35,13 +62,14 @@ export default function GearMember({ setCurrentPage }) {
       ]
     },
     {
+      id: 'gold',
       name: 'Hội Viên Vàng (Gold Pass)',
       price: '499.000 VNĐ',
       priceDetail: '/ tháng',
       icon: <Crown style={{ color: '#eab308' }} size={32} />,
       color: '#ca8a04',
       bg: '#fefce8',
-      buttonText: 'Nâng cấp Gold',
+      buttonText: user?.subscriptionTier === 'gold' ? 'Đang sử dụng' : 'Nâng cấp Gold',
       buttonClass: 'btn-primary',
       highlight: true,
       features: [
@@ -121,8 +149,13 @@ export default function GearMember({ setCurrentPage }) {
 
             <button 
               className={`btn ${tier.buttonClass}`} 
-              style={{ width: '100%', padding: '12px', fontSize: '16px', fontWeight: '600', borderRadius: '12px', backgroundColor: tier.highlight ? '#eab308' : '', borderColor: tier.highlight ? '#eab308' : '' }}
-              onClick={() => alert(`Chức năng thanh toán cho gói ${tier.name} đang được tích hợp.`)}
+              style={{ width: '100%', padding: '12px', fontSize: '16px', fontWeight: '600', borderRadius: '12px', backgroundColor: tier.highlight ? '#eab308' : '', borderColor: tier.highlight ? '#eab308' : '', opacity: user?.subscriptionTier === tier.id ? 0.7 : 1, cursor: user?.subscriptionTier === tier.id ? 'default' : 'pointer' }}
+              onClick={() => {
+                 if (tier.id !== 'free' && user?.subscriptionTier !== tier.id) {
+                   handleSubscribe(tier);
+                 }
+              }}
+              disabled={user?.subscriptionTier === tier.id || tier.id === 'free'}
             >
               {tier.buttonText}
             </button>
@@ -174,6 +207,15 @@ export default function GearMember({ setCurrentPage }) {
           </table>
         </div>
       </div>
+
+      {/* Professional Payment Checkout */}
+      {showPayment && selectedTier && (
+        <SubscriptionCheckout 
+          tier={selectedTier} 
+          onCancel={() => setShowPayment(false)} 
+          onComplete={processPayment} 
+        />
+      )}
     </div>
   );
 }
