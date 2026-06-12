@@ -297,28 +297,30 @@ export const StoreProvider = ({ children }) => {
         const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
         if (isRealSupabase) {
           try {
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .maybeSingle();
+            const [profileRes, subRes] = await Promise.all([
+              supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+              supabase.from('subscriptions').select('*').eq('user_id', user.id).maybeSingle()
+            ]);
             
-            if (!error && data) {
+            const data = profileRes.data;
+            const subData = subRes.data;
+
+            if (data || subData) {
               setUser(prev => {
                 if (!prev || prev.id !== user.id) return prev;
                 const merged = {
                   ...prev,
-                  name: data.name || prev.name,
-                  avatar: data.avatar || prev.avatar,
-                  isPartner: data.is_partner !== undefined ? data.is_partner : prev.isPartner,
-                  partnerStatus: data.partner_status || (data.is_partner ? 'approved' : prev.partnerStatus),
-                  phone: data.phone || prev.phone,
-                  citizenId: data.citizen_id || prev.citizenId,
-                  studioName: data.studio_name || prev.studioName,
-                  address: data.address || prev.address,
+                  name: data?.name || prev.name,
+                  avatar: data?.avatar || prev.avatar,
+                  isPartner: data?.is_partner !== undefined ? data.is_partner : prev.isPartner,
+                  partnerStatus: data?.partner_status || (data?.is_partner ? 'approved' : prev.partnerStatus),
+                  phone: data?.phone || prev.phone,
+                  citizenId: data?.citizen_id || prev.citizenId,
+                  studioName: data?.studio_name || prev.studioName,
+                  address: data?.address || prev.address,
                   favorites: prev.favorites || [],
-                  subscriptionTier: data.subscription_tier || prev.subscriptionTier || 'free',
-                  subscriptionEnd: data.subscription_end || prev.subscriptionEnd || null
+                  subscriptionTier: subData?.tier || data?.subscription_tier || prev.subscriptionTier || 'free',
+                  subscriptionEnd: subData?.current_period_end || data?.subscription_end || prev.subscriptionEnd || null
                 };
                 localStorage.setItem('gearup_current_user', JSON.stringify(merged));
                 return merged;
@@ -1040,16 +1042,27 @@ export const StoreProvider = ({ children }) => {
     setUser(updatedUser);
     localStorage.setItem('gearup_current_user', JSON.stringify(updatedUser));
 
-    // Optional: Update DB if it has the fields
+    // Update DB subscriptions table
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase && user.id && !user.id.startsWith('user-')) {
       try {
-        await supabase.from('profiles').update({ 
-          subscription_tier: tier,
-          subscription_end: endStr
-        }).eq('id', user.id);
+        const { data: existingSub } = await supabase.from('subscriptions').select('id').eq('user_id', user.id).maybeSingle();
+        if (existingSub) {
+          await supabase.from('subscriptions').update({ 
+            tier: tier,
+            current_period_end: endStr,
+            status: 'active'
+          }).eq('user_id', user.id);
+        } else {
+          await supabase.from('subscriptions').insert([{
+            user_id: user.id,
+            tier: tier,
+            current_period_end: endStr,
+            status: 'active'
+          }]);
+        }
       } catch (err) {
-        console.log('Skipped DB profile update for subscription (columns might not exist yet)', err);
+        console.log('Skipped DB subscriptions update', err);
       }
     }
   };
