@@ -777,7 +777,8 @@ export const StoreProvider = ({ children }) => {
       assetTitle,
       senderName: senderName || user?.name,
       text,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString()
     };
     
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');

@@ -58,6 +58,13 @@ export default function PlatformDashboard() {
 
   // Tabs: 'approvals' | 'assets' | 'users' | 'financials' | 'blogs'
   const [activeTab, setActiveTab] = useState('approvals');
+  const [cskhTab, setCskhTab] = useState('unassigned'); // 'unassigned' or 'mine'
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Blog Management States
   const [showBlogForm, setShowBlogForm] = useState(false);
@@ -1611,18 +1618,61 @@ export default function PlatformDashboard() {
                   userId: uId,
                   userName: m.senderName !== 'Admin CSKH' ? m.senderName : 'Khách hàng', // fallback if first msg is admin
                   lastMsgDate: m.timestamp,
-                  messages: []
+                  messages: [],
+                  assignee: null
                 };
               }
-              if (m.senderName !== 'Admin CSKH') {
+              if (m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !m.text.includes('[ASSIGNED]')) {
                 conversationsMap[uId].userName = m.senderName;
+              }
+              if (m.text.startsWith('[ASSIGNED]')) {
+                conversationsMap[uId].assignee = m.text.replace('[ASSIGNED]', '').trim();
+              } else if (m.senderName === 'Admin CSKH') {
+                // If an admin replies, they auto-claim it (fallback for old messages)
+                if (!conversationsMap[uId].assignee) {
+                   conversationsMap[uId].assignee = 'Admin CSKH';
+                }
               }
               conversationsMap[uId].messages.push(m);
               conversationsMap[uId].lastMsgDate = m.timestamp;
             });
             
-            const conversationsList = Object.values(conversationsMap).sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
+            const calculateSlaStatus = (conv) => {
+              const userMessages = conv.messages.filter(m => m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]'));
+              const lastAdminMessage = conv.messages.slice().reverse().find(m => m.senderName === 'Admin CSKH' || m.text.startsWith('[ASSIGNED]'));
+              const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
+
+              if (!lastUserMessage) return { type: 'none' };
+              if (lastAdminMessage && (!lastUserMessage.createdAt || (lastAdminMessage.createdAt && lastAdminMessage.createdAt > lastUserMessage.createdAt))) return { type: 'replied' };
+              
+              if (!lastUserMessage.createdAt) return { type: 'none' };
+
+              // Timer running
+              const msgTime = new Date(lastUserMessage.createdAt).getTime();
+              const elapsedMin = (now - msgTime) / 60000;
+              if (elapsedMin > 10) return { type: 'overdue', val: Math.floor(elapsedMin - 10) };
+              
+              const remainingSec = Math.floor(600 - (now - msgTime) / 1000);
+              const mm = Math.floor(remainingSec / 60).toString().padStart(2, '0');
+              const ss = (remainingSec % 60).toString().padStart(2, '0');
+              return { type: 'running', val: `${mm}:${ss}` };
+            };
+
+            const unassignedList = Object.values(conversationsMap)
+              .filter(conv => conv.messages.some(m => m.text.includes('[CẦN CSKH]')) && !conv.assignee)
+              .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
+            
+            const myAssignedList = Object.values(conversationsMap)
+              .filter(conv => conv.assignee === user?.name || (conv.assignee === 'Admin CSKH' && user))
+              .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
+
+            const conversationsList = cskhTab === 'unassigned' ? unassignedList : myAssignedList;
             const selectedConv = selectedCskhUserId ? conversationsMap[selectedCskhUserId] : null;
+
+            const handleAcceptTicket = () => {
+              if (!selectedCskhUserId) return;
+              addMessage(`cskh-${selectedCskhUserId}`, 'Hỗ trợ Khách hàng', 'Hệ thống', `[ASSIGNED] ${user?.name}`);
+            };
 
             const handleReply = (e) => {
               e.preventDefault();
@@ -1636,31 +1686,62 @@ export default function PlatformDashboard() {
                 
                 {/* User List */}
                 <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', fontWeight: '600', backgroundColor: '#f8fafc' }}>
-                    Danh sách yêu cầu hỗ trợ ({conversationsList.length})
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <div 
+                      onClick={() => setCskhTab('unassigned')}
+                      style={{ flex: 1, padding: '16px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', borderBottom: cskhTab === 'unassigned' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'unassigned' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
+                    >
+                      Hộp thư chung ({unassignedList.length})
+                    </div>
+                    <div 
+                      onClick={() => setCskhTab('mine')}
+                      style={{ flex: 1, padding: '16px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', borderBottom: cskhTab === 'mine' ? '2px solid var(--color-primary)' : '2px solid transparent', color: cskhTab === 'mine' ? 'var(--color-primary)' : '#64748b', transition: 'all 0.2s' }}
+                    >
+                      Của tôi ({myAssignedList.length})
+                    </div>
                   </div>
                   <div style={{ flex: 1, overflowY: 'auto' }}>
                     {conversationsList.length === 0 ? (
                       <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>Chưa có tin nhắn nào</div>
                     ) : (
-                      conversationsList.map(conv => (
-                        <div 
-                          key={conv.userId}
-                          onClick={() => setSelectedCskhUserId(conv.userId)}
-                          style={{
-                            padding: '16px',
-                            borderBottom: '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            backgroundColor: selectedCskhUserId === conv.userId ? '#eff6ff' : '#ffffff',
-                            transition: 'background-color 0.2s'
-                          }}
-                        >
-                          <div style={{ fontWeight: '500', marginBottom: '4px', color: '#0f172a' }}>{conv.userName}</div>
-                          <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {conv.messages[conv.messages.length - 1]?.text}
+                      conversationsList.map(conv => {
+                        const sla = calculateSlaStatus(conv);
+                        return (
+                          <div 
+                            key={conv.userId}
+                            onClick={() => setSelectedCskhUserId(conv.userId)}
+                            style={{
+                              padding: '16px',
+                              borderBottom: '1px solid #e2e8f0',
+                              cursor: 'pointer',
+                              backgroundColor: selectedCskhUserId === conv.userId ? '#eff6ff' : '#ffffff',
+                              transition: 'background-color 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <div style={{ fontWeight: '500', color: '#0f172a' }}>{conv.userName}</div>
+                              {sla.type === 'running' && (
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#eab308', backgroundColor: '#fef9c3', padding: '2px 6px', borderRadius: '4px' }}>
+                                  ⏳ {sla.val}
+                                </div>
+                              )}
+                              {sla.type === 'overdue' && (
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#ef4444', backgroundColor: '#fee2e2', padding: '2px 6px', borderRadius: '4px' }}>
+                                  ⚠️ Quá hạn {sla.val}p
+                                </div>
+                              )}
+                              {sla.type === 'replied' && (
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#10b981', backgroundColor: '#dcfce7', padding: '2px 6px', borderRadius: '4px' }}>
+                                  ✓ Đã phản hồi
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {conv.messages[conv.messages.length - 1]?.text}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -1674,58 +1755,56 @@ export default function PlatformDashboard() {
                       </div>
                       
                       {/* Message List */}
-                      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
-                        {selectedConv.messages.map(msg => {
+                      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
+                        {selectedConv.messages.filter(m => m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]')).map(msg => {
                           const isAdmin = msg.senderName === 'Admin CSKH';
+                          
                           return (
-                            <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
-                              <div style={{
-                                maxWidth: '70%',
-                                padding: '12px 16px',
-                                borderRadius: '16px',
-                                backgroundColor: isAdmin ? '#0066ff' : '#ffffff',
-                                color: isAdmin ? '#ffffff' : '#0f172a',
-                                border: isAdmin ? 'none' : '1px solid #cbd5e1',
-                                borderBottomRightRadius: isAdmin ? '4px' : '16px',
-                                borderBottomLeftRadius: isAdmin ? '16px' : '4px',
-                                fontSize: '14px',
-                                lineHeight: '1.5'
-                              }}>
-                                {msg.text}
+                            <div key={msg.id} style={{ alignSelf: isAdmin ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px', textAlign: isAdmin ? 'right' : 'left' }}>
+                                {msg.senderName} • {msg.timestamp}
                               </div>
-                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>{msg.timestamp}</div>
+                              <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: isAdmin ? 'var(--color-primary)' : '#ffffff', color: isAdmin ? '#ffffff' : '#0f172a', border: isAdmin ? 'none' : '1px solid #e2e8f0', fontSize: '14px', lineHeight: '1.5', borderBottomRightRadius: isAdmin ? '4px' : '16px', borderBottomLeftRadius: isAdmin ? '16px' : '4px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                {msg.text.replace('[CẦN CSKH]', '').trim()}
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-
-                      {/* Input Box */}
-                      <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
-                        <form onSubmit={handleReply} style={{ display: 'flex', gap: '12px' }}>
-                          <input 
-                            type="text" 
-                            placeholder="Nhập câu trả lời..." 
-                            value={cskhReplyText}
-                            onChange={(e) => setCskhReplyText(e.target.value)}
-                            style={{ flex: 1, padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: '24px', outline: 'none', fontSize: '14px' }}
-                          />
-                          <button 
-                            type="submit"
-                            disabled={!cskhReplyText.trim()}
-                            style={{
-                              padding: '0 24px',
-                              backgroundColor: cskhReplyText.trim() ? '#0066ff' : '#94a3b8',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '24px',
-                              fontWeight: '600',
-                              cursor: cskhReplyText.trim() ? 'pointer' : 'not-allowed',
-                              transition: 'background-color 0.2s'
-                            }}
-                          >
-                            Gửi
-                          </button>
-                        </form>
+                      {/* Reply Input */}
+                      <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                        {!selectedConv.assignee ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ color: '#64748b', fontSize: '14px' }}>Cuộc hội thoại này chưa được phân công</div>
+                            <button 
+                              onClick={handleAcceptTicket}
+                              style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                            >
+                              Tiếp nhận xử lý
+                            </button>
+                          </div>
+                        ) : selectedConv.assignee !== user?.name && selectedConv.assignee !== 'Admin CSKH' ? (
+                          <div style={{ color: '#ef4444', textAlign: 'center', fontSize: '14px', fontWeight: '500' }}>
+                            Cuộc hội thoại này đang được xử lý bởi {selectedConv.assignee}
+                          </div>
+                        ) : (
+                          <form onSubmit={handleReply} style={{ display: 'flex', gap: '12px' }}>
+                            <input
+                              type="text"
+                              value={cskhReplyText}
+                              onChange={(e) => setCskhReplyText(e.target.value)}
+                              placeholder="Nhập câu trả lời..."
+                              style={{ flex: 1, padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                            />
+                            <button 
+                              type="submit" 
+                              disabled={!cskhReplyText.trim()}
+                              style={{ backgroundColor: cskhReplyText.trim() ? 'var(--color-primary)' : '#94a3b8', color: '#ffffff', border: 'none', padding: '0 24px', borderRadius: '8px', fontWeight: '600', cursor: cskhReplyText.trim() ? 'pointer' : 'not-allowed' }}
+                            >
+                              Gửi
+                            </button>
+                          </form>
+                        )}
                       </div>
                     </>
                   ) : (

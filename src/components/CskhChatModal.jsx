@@ -1,6 +1,8 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { StoreContext } from '../context/StoreContext';
-import { X, Send, User, Headset } from 'lucide-react';
+import { X, Send, User, Headset, Bot } from 'lucide-react';
+import { generateAiResponse } from '../utils/geminiService';
+import ReactMarkdown from 'react-markdown';
 
 export default function CskhChatModal({ isOpen, onClose }) {
   const { user, messages, addMessage } = useContext(StoreContext);
@@ -10,19 +12,71 @@ export default function CskhChatModal({ isOpen, onClose }) {
   const cskhAssetId = user ? `cskh-${user.id}` : null;
   const chatHistory = cskhAssetId ? messages.filter(m => m.assetId === cskhAssetId) : [];
 
+  const [isTyping, setIsTyping] = useState(false);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [chatHistory]);
+  }, [chatHistory, isTyping]);
+
+  useEffect(() => {
+    if (isOpen && user && chatHistory.length === 0 && !isTyping) {
+      // Auto greet
+      setIsTyping(true);
+      setTimeout(() => {
+        addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', `Chào ${user.name}, tôi là trợ lý thông minh của GearUp. Hôm nay bạn cần tôi hỗ trợ vấn đề gì?`);
+        setIsTyping(false);
+      }, 1000);
+    }
+  }, [isOpen, user, chatHistory.length]);
 
   if (!isOpen) return null;
 
+  const isHumanMode = chatHistory.some(m => m.text.includes('[CẦN CSKH]') || m.senderName === 'Admin CSKH');
+
+  const handleSendText = async (textToSend) => {
+    if (!textToSend.trim() || !user) return;
+    
+    // 1. Send user message
+    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, textToSend);
+    setText('');
+
+    // If requesting human or already in human mode, don't trigger AI
+    if (isHumanMode || textToSend.includes('[CẦN CSKH]')) {
+      if (textToSend.includes('[CẦN CSKH]')) {
+         setIsTyping(true);
+         setTimeout(() => {
+           addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', 'Hệ thống đang kết nối bạn với nhân viên CSKH. Vui lòng đợi trong ít phút nhé!');
+           setIsTyping(false);
+         }, 1000);
+      }
+      return;
+    }
+
+    // 2. Trigger AI
+    setIsTyping(true);
+    const aiReply = await generateAiResponse(textToSend);
+    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', aiReply);
+    setIsTyping(false);
+
+    // Auto hand-off if AI decides it's too complex
+    if (aiReply.toLowerCase().includes('chuyển cho nhân viên cskh') || aiReply.toLowerCase().includes('hỗ trợ trực tiếp')) {
+       addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, '[CẦN CSKH]');
+    }
+  };
+
   const handleSend = (e) => {
     e.preventDefault();
-    if (!text.trim() || !user) return;
-    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, text);
-    setText('');
+    handleSendText(text);
+  };
+
+  const handleQuickReply = (optionText) => {
+    handleSendText(optionText);
+  };
+
+  const handleRequestHuman = () => {
+    handleSendText('[CẦN CSKH]');
   };
 
   return (
@@ -70,7 +124,7 @@ export default function CskhChatModal({ isOpen, onClose }) {
         </div>
       ) : (
         <>
-          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
+          <div ref={scrollRef} className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
             {chatHistory.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px', marginTop: '20px' }}>
                 Bắt đầu cuộc trò chuyện với chúng tôi
@@ -78,46 +132,107 @@ export default function CskhChatModal({ isOpen, onClose }) {
             ) : (
               chatHistory.map((msg) => {
                 const isMe = msg.senderName === user.name;
+                const isAi = msg.senderName === 'GearUp AI';
+                
+                // Hide the [CẦN CSKH] tag from UI
+                const displayText = msg.text.replace('[CẦN CSKH]', '').trim();
+                if (!displayText) return null;
+
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                    <div style={{
-                      maxWidth: '80%',
-                      padding: '10px 14px',
-                      borderRadius: '16px',
-                      backgroundColor: isMe ? 'var(--color-primary)' : '#ffffff',
-                      color: isMe ? '#ffffff' : 'var(--color-text-main)',
-                      border: isMe ? 'none' : '1px solid var(--color-border)',
-                      borderBottomRightRadius: isMe ? '4px' : '16px',
-                      borderBottomLeftRadius: isMe ? '16px' : '4px',
-                      fontSize: '14px',
-                      lineHeight: '1.4'
-                    }}>
-                      {msg.text}
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                      {isAi && (
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                          <Bot size={16} />
+                        </div>
+                      )}
+                      <div style={{
+                        maxWidth: isAi ? '220px' : '260px',
+                        padding: '10px 14px',
+                        borderRadius: '16px',
+                        backgroundColor: isMe ? 'var(--color-primary)' : (isAi ? '#e0e7ff' : '#ffffff'),
+                        color: isMe ? '#ffffff' : 'var(--color-text-main)',
+                        border: (isMe || isAi) ? 'none' : '1px solid var(--color-border)',
+                        borderBottomRightRadius: isMe ? '4px' : '16px',
+                        borderBottomLeftRadius: isMe ? '16px' : '4px',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        <ReactMarkdown components={{
+                          p: ({node, ...props}) => <span {...props} />,
+                          a: ({node, ...props}) => <a style={{color: 'inherit', textDecoration: 'underline'}} {...props} />,
+                          strong: ({node, ...props}) => <strong style={{fontWeight: 600}} {...props} />,
+                          ul: ({node, ...props}) => <ul style={{margin: '4px 0', paddingLeft: '20px'}} {...props} />,
+                          ol: ({node, ...props}) => <ol style={{margin: '4px 0', paddingLeft: '20px'}} {...props} />,
+                          li: ({node, ...props}) => <li style={{marginBottom: '2px'}} {...props} />
+                        }}>
+                          {displayText}
+                        </ReactMarkdown>
+                      </div>
                     </div>
-                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                      {msg.timestamp}
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', marginRight: isMe ? '4px' : '36px', marginLeft: !isMe ? '36px' : '4px' }}>
+                      {msg.senderName === 'Admin CSKH' ? 'Nhân viên CSKH' : msg.timestamp}
                     </span>
                   </div>
                 );
               })
             )}
+            
+            {isTyping && (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                  <Bot size={16} />
+                </div>
+                <div style={{ padding: '10px 14px', borderRadius: '16px', backgroundColor: '#e0e7ff', borderBottomLeftRadius: '4px', fontSize: '14px', color: '#4f46e5', fontStyle: 'italic' }}>
+                  AI đang trả lời...
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Quick Replies */}
+          {chatHistory.length > 0 && !chatHistory.some(m => m.text.includes('[CẦN CSKH]')) && (
+            <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', overflowX: 'auto', backgroundColor: '#f8fafc', borderTop: '1px solid var(--color-border)' }} className="no-scrollbar">
+              <button onClick={() => handleQuickReply('1. Hỗ trợ về đơn hàng')} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', whiteSpace: 'nowrap', cursor: 'pointer' }}>Đơn hàng</button>
+              <button onClick={() => handleQuickReply('2. Trở thành đối tác')} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', whiteSpace: 'nowrap', cursor: 'pointer' }}>Đối tác</button>
+              <button onClick={() => handleQuickReply('3. Báo cáo sự cố')} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', whiteSpace: 'nowrap', cursor: 'pointer' }}>Sự cố</button>
+              <button onClick={handleRequestHuman} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: 'none', backgroundColor: '#fee2e2', color: '#ef4444', whiteSpace: 'nowrap', cursor: 'pointer', fontWeight: '500' }}>Gặp nhân viên</button>
+            </div>
+          )}
 
           {/* Input */}
           <div style={{ padding: '16px', borderTop: '1px solid var(--color-border)', backgroundColor: '#ffffff' }}>
-            <form onSubmit={handleSend} style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
+            <form onSubmit={handleSend} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+              <textarea
+                className="no-scrollbar"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (text.trim()) handleSendText(text);
+                  }
+                }}
                 placeholder="Nhập tin nhắn..."
+                rows="1"
                 style={{
                   flex: 1,
                   padding: '10px 14px',
                   border: '1px solid var(--color-border)',
                   borderRadius: '20px',
                   outline: 'none',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  resize: 'none',
+                  fontFamily: 'inherit',
+                  maxHeight: '100px',
+                  overflowY: 'auto',
+                  boxSizing: 'border-box'
                 }}
               />
               <button
@@ -133,7 +248,9 @@ export default function CskhChatModal({ isOpen, onClose }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: text.trim() ? 'pointer' : 'not-allowed'
+                  cursor: text.trim() ? 'pointer' : 'not-allowed',
+                  flexShrink: 0,
+                  marginBottom: '2px'
                 }}
               >
                 <Send size={18} />

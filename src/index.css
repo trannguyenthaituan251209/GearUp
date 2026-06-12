@@ -970,3 +970,7 @@ textarea.form-control {
     border-radius: 8px 0 0 8px;
   }
 }
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
