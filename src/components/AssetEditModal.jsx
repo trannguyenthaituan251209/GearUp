@@ -13,6 +13,7 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
   const [mount, setMount] = useState('');
   const [cameraType, setCameraType] = useState('');
   const [sensorType, setSensorType] = useState('');
+  const [specificPolicy, setSpecificPolicy] = useState('');
 
   useEffect(() => {
     if (asset) {
@@ -26,6 +27,7 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
       setMount(asset.mount || '');
       setCameraType(asset.cameraType || '');
       setSensorType(asset.sensorType || '');
+      setSpecificPolicy(asset.specificPolicy || '');
     }
   }, [asset]);
 
@@ -81,7 +83,8 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
       specs: specsArray.length > 0 ? specsArray : ['Hoạt động tốt'],
       mount,
       cameraType,
-      sensorType
+      sensorType,
+      specificPolicy
     });
   };
 
@@ -206,13 +209,24 @@ export default function AssetEditModal({ asset, onClose, onSave }) {
           </div>
 
           <div className="form-group">
-            <label>Mô tả chi tiết & Quy định cho thuê</label>
+            <label>Mô tả chi tiết</label>
             <textarea 
               className="form-control" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
               style={{ minHeight: '120px' }}
+            ></textarea>
+          </div>
+
+          <div className="form-group">
+            <label>Chính sách & Quyền lợi riêng (Tuỳ chọn)</label>
+            <textarea 
+              className="form-control" 
+              value={specificPolicy}
+              onChange={(e) => setSpecificPolicy(e.target.value)}
+              placeholder="Ví dụ: Tặng kèm thẻ nhớ 64GB, giảm 5% cho sinh viên..."
+              style={{ minHeight: '80px' }}
             ></textarea>
           </div>
 

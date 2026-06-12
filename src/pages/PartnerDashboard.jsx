@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useContext, useState, useMemo, useEffect } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
 import { 
@@ -30,6 +30,25 @@ export default function PartnerDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const [sessionViewedBookings] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('partner_viewed_bookings')) || [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (activeTab === 'orders' && bookings.length > 0) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('partner_viewed_bookings')) || [];
+        // We use bookings instead of myBookings here to avoid myBookings dependency issues, 
+        // but we filter for only the ones this partner owns.
+        // Actually myBookings is available below, let's just use it.
+      } catch {}
+    }
+  }, [activeTab, bookings]);
+
   // --- Data Calculations ---
   const myAssets = useMemo(() => assets.filter(a => 
     a.ownerId === user?.id || 
@@ -39,6 +58,17 @@ export default function PartnerDashboard() {
   const myAssetIds = useMemo(() => myAssets.map(a => a.id), [myAssets]);
 
   const myBookings = useMemo(() => bookings.filter(b => myAssetIds.includes(b.assetId)), [bookings, myAssetIds]);
+
+  useEffect(() => {
+    if (activeTab === 'orders' && myBookings.length > 0) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('partner_viewed_bookings')) || [];
+        const currentIds = myBookings.map(b => b.id);
+        const newStored = Array.from(new Set([...stored, ...currentIds]));
+        localStorage.setItem('partner_viewed_bookings', JSON.stringify(newStored));
+      } catch {}
+    }
+  }, [activeTab, myBookings]);
 
   const totalGrossRevenue = useMemo(() => myBookings
     .filter(b => ['approved', 'paid', 'returned'].includes(b.status))
@@ -156,6 +186,71 @@ export default function PartnerDashboard() {
   );
 
   const [editingAsset, setEditingAsset] = useState(null);
+  const [assetFilterCategory, setAssetFilterCategory] = useState('all');
+  const [assetSortBy, setAssetSortBy] = useState('newest');
+
+  const filteredAndSortedAssets = useMemo(() => {
+    let result = [...myAssets];
+    if (assetFilterCategory !== 'all') {
+      result = result.filter(a => a.category === assetFilterCategory);
+    }
+    
+    switch (assetSortBy) {
+      case 'price_asc':
+        result.sort((a, b) => a.pricePerDay - b.pricePerDay);
+        break;
+      case 'price_desc':
+        result.sort((a, b) => b.pricePerDay - a.pricePerDay);
+        break;
+      case 'name_asc':
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'name_desc':
+        result.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case 'newest':
+      default:
+        result.reverse();
+        break;
+    }
+    return result;
+  }, [myAssets, assetFilterCategory, assetSortBy]);
+
+  const [orderFilterCategory, setOrderFilterCategory] = useState('all');
+  const [orderSortBy, setOrderSortBy] = useState('newest');
+
+  const filteredAndSortedBookings = useMemo(() => {
+    let result = [...myBookings];
+    
+    // Filter by Category
+    if (orderFilterCategory !== 'all') {
+      result = result.filter(b => {
+        const asset = myAssets.find(a => a.id === b.assetId);
+        return asset && asset.category === orderFilterCategory;
+      });
+    }
+
+    // Sort
+    switch (orderSortBy) {
+      case 'price_asc':
+        result.sort((a, b) => a.totalPrice - b.totalPrice);
+        break;
+      case 'price_desc':
+        result.sort((a, b) => b.totalPrice - a.totalPrice);
+        break;
+      case 'date_asc':
+        result.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        break;
+      case 'date_desc':
+        result.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+        break;
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
+    }
+    return result;
+  }, [myBookings, myAssets, orderFilterCategory, orderSortBy]);
 
   const renderListings = () => (
     <div className="animate-fade-in">
@@ -165,15 +260,44 @@ export default function PartnerDashboard() {
           <PlusCircle size={18} /> Đăng Thiết Bị Mới
         </button>
       </div>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <select 
+          className="form-control" 
+          style={{ width: 'auto', minWidth: '150px' }}
+          value={assetFilterCategory}
+          onChange={(e) => setAssetFilterCategory(e.target.value)}
+        >
+          <option value="all">Tất cả danh mục</option>
+          <option value="sony_cam">Máy ảnh Sony</option>
+          <option value="canon_cam">Máy ảnh Canon</option>
+          <option value="fuji_cam">Máy ảnh Fujifilm</option>
+          <option value="nikon_cam">Máy ảnh Nikon</option>
+          <option value="sony_lens">Ống kính Sony</option>
+          <option value="canon_lens">Ống kính Canon</option>
+        </select>
+
+        <select 
+          className="form-control" 
+          style={{ width: 'auto', minWidth: '150px' }}
+          value={assetSortBy}
+          onChange={(e) => setAssetSortBy(e.target.value)}
+        >
+          <option value="newest">Mới nhất</option>
+          <option value="price_asc">Giá: Thấp đến Cao</option>
+          <option value="price_desc">Giá: Cao đến Thấp</option>
+          <option value="name_asc">Tên: A-Z</option>
+          <option value="name_desc">Tên: Z-A</option>
+        </select>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-        {myAssets.length === 0 ? (
+        {filteredAndSortedAssets.length === 0 ? (
           <div style={{ ...glassCardStyle, gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
             <Camera size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-            <p>Bạn chưa đăng thiết bị nào.</p>
+            <p>Không có thiết bị nào phù hợp.</p>
           </div>
         ) : (
-          myAssets.map(asset => (
+          filteredAndSortedAssets.map(asset => (
             <div key={asset.id} style={{ ...glassCardStyle, padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '180px', position: 'relative' }}>
                 <img src={asset.imageUrl} alt={asset.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -228,6 +352,37 @@ export default function PartnerDashboard() {
   const renderOrders = () => (
     <div className="animate-fade-in">
       <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Quản lý Đơn Hàng</h2>
+      
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <select 
+          className="form-control" 
+          style={{ width: 'auto', minWidth: '150px' }}
+          value={orderFilterCategory}
+          onChange={(e) => setOrderFilterCategory(e.target.value)}
+        >
+          <option value="all">Tất cả danh mục</option>
+          <option value="sony_cam">Máy ảnh Sony</option>
+          <option value="canon_cam">Máy ảnh Canon</option>
+          <option value="fuji_cam">Máy ảnh Fujifilm</option>
+          <option value="nikon_cam">Máy ảnh Nikon</option>
+          <option value="sony_lens">Ống kính Sony</option>
+          <option value="canon_lens">Ống kính Canon</option>
+        </select>
+
+        <select 
+          className="form-control" 
+          style={{ width: 'auto', minWidth: '150px' }}
+          value={orderSortBy}
+          onChange={(e) => setOrderSortBy(e.target.value)}
+        >
+          <option value="newest">Đơn mới nhất</option>
+          <option value="price_asc">Tổng tiền: Thấp đến Cao</option>
+          <option value="price_desc">Tổng tiền: Cao đến Thấp</option>
+          <option value="date_asc">Ngày bắt đầu thuê: Tăng dần</option>
+          <option value="date_desc">Ngày bắt đầu thuê: Giảm dần</option>
+        </select>
+      </div>
+
       <div style={{ ...glassCardStyle, padding: '0', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -243,19 +398,32 @@ export default function PartnerDashboard() {
               </tr>
             </thead>
             <tbody>
-              {myBookings.length === 0 ? (
+              {filteredAndSortedBookings.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào.</td>
+                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào phù hợp.</td>
                 </tr>
               ) : (
-                myBookings.map(b => (
-                  <tr key={b.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>#{b.id.split('-')[1]}</td>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: '600' }}>{b.renterName}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px' }}>{b.assetTitle}</td>
+                filteredAndSortedBookings.map(b => {
+                  const isNewPaid = b.status === 'paid' && !sessionViewedBookings.includes(b.id);
+                  return (
+                    <tr key={b.id} style={{ 
+                      borderBottom: '1px solid var(--color-border)'
+                    }}>
+                      <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>#{b.id.split('-')[1]}</td>
+                      <td style={{ padding: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {b.renterName}
+                          {isNewPaid && (
+                            <span style={{ 
+                              backgroundColor: 'var(--color-warning)', color: '#fff', fontSize: '10px', 
+                              padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold',
+                              animation: 'pulse 2s infinite'
+                            }}>MỚI</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
+                      </td>
+                      <td style={{ padding: '16px', fontSize: '14px' }}>{b.assetTitle}</td>
                     <td style={{ padding: '16px', fontSize: '14px' }}>
                       <div>Từ: {new Date(b.startDate).toLocaleDateString('vi-VN')}</div>
                       <div>Đến: {new Date(b.endDate).toLocaleDateString('vi-VN')}</div>
@@ -277,11 +445,12 @@ export default function PartnerDashboard() {
                         </div>
                       )}
                       {(b.status === 'approved' || b.status === 'paid') && (
-                        <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'returned')}>Nhận lại máy</button>
+                        <button className="btn btn-primary btn-sm" onClick={() => updateBookingStatus(b.id, 'returned')}>Nhận lại máy</button>
                       )}
                     </td>
                   </tr>
-                ))
+                );
+                })
               )}
             </tbody>
           </table>
@@ -438,6 +607,7 @@ export default function PartnerDashboard() {
   const [newPricePerDay, setNewPricePerDay] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newSpecsText, setNewSpecsText] = useState('');
+  const [newSpecificPolicy, setNewSpecificPolicy] = useState('');
   const [newImageSelect, setNewImageSelect] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [newMount, setNewMount] = useState('');
@@ -489,11 +659,14 @@ export default function PartnerDashboard() {
       cameraType: newCameraType,
       sensorType: newSensorType,
       ownerId: user?.id || 'demo-user-id',
-      ownerName: user?.name || 'Nguyễn Minh Quân'
+      ownerName: user?.name || 'Nguyễn Minh Quân',
+      specificPolicy: newSpecificPolicy
     });
     alert('Đăng thiết bị thành công!');
     setNewTitle(''); setNewPricePerDay(''); setNewDescription(''); setNewSpecsText('');
-    setNewMount(''); setNewCameraType(''); setNewSensorType('');
+    setNewSpecificPolicy('');
+    setNewMount('');
+    setNewCameraType(''); setNewSensorType('');
     setActiveTab('listings');
   };
 
@@ -568,6 +741,11 @@ export default function PartnerDashboard() {
           <div className="form-group">
             <label>Mô tả chi tiết</label>
             <textarea className="form-control" style={{ minHeight: '100px' }} value={newDescription} onChange={e => setNewDescription(e.target.value)} required></textarea>
+          </div>
+
+          <div className="form-group">
+            <label>Chính sách & Quyền lợi riêng (Tuỳ chọn)</label>
+            <textarea className="form-control" style={{ minHeight: '80px' }} value={newSpecificPolicy} onChange={e => setNewSpecificPolicy(e.target.value)} placeholder="Ví dụ: Tặng kèm thẻ nhớ 64GB, giảm 5% cho sinh viên..."></textarea>
           </div>
 
           <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', minWidth: '150px' }}>Đăng Tải</button>

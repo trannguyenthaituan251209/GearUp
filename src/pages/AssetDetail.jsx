@@ -43,6 +43,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
 
   const [realOwnerName, setRealOwnerName] = useState(null);
   const [realOwnerAvatar, setRealOwnerAvatar] = useState(null);
+  const [ownerGeneralPolicy, setOwnerGeneralPolicy] = useState('');
   
   // Reviews State
   const [reviews, setReviews] = useState([]);
@@ -52,13 +53,14 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
     if (asset?.ownerId) {
       supabase
         .from('profiles')
-        .select('name, studio_name, avatar')
+        .select('name, studio_name, avatar, general_policy')
         .eq('id', asset.ownerId)
         .single()
         .then(({ data, error }) => {
           if (!error && data) {
             setRealOwnerName(data.studio_name || data.name);
             if (data.avatar) setRealOwnerAvatar(data.avatar);
+            if (data.general_policy) setOwnerGeneralPolicy(data.general_policy);
           }
         });
     }
@@ -441,6 +443,27 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
             <div style={{ fontSize: '14px', color: 'rgba(0,0,0,.8)', lineHeight: '1.8', whiteSpace: 'pre-line', textAlign: 'justify', wordBreak: 'break-word' }}>
               {asset.description}
             </div>
+
+            {(asset.specificPolicy || ownerGeneralPolicy) && (
+              <div style={{ marginTop: '32px', backgroundColor: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Star size={18} fill="currentColor" />
+                  Chính sách & Ưu đãi của Đối tác
+                </h2>
+                {asset.specificPolicy && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--color-dark)', marginBottom: '4px' }}>Dành riêng cho thiết bị này:</h3>
+                    <div style={{ fontSize: '14px', color: 'var(--color-text)', whiteSpace: 'pre-line', lineHeight: '1.5' }}>{asset.specificPolicy}</div>
+                  </div>
+                )}
+                {ownerGeneralPolicy && (
+                  <div>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--color-dark)', marginBottom: '4px' }}>Chính sách chung:</h3>
+                    <div style={{ fontSize: '14px', color: 'var(--color-text)', whiteSpace: 'pre-line', lineHeight: '1.5' }}>{ownerGeneralPolicy}</div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

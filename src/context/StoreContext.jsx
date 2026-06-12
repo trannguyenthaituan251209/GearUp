@@ -24,7 +24,8 @@ const mapAssetFromDB = (a) => ({
   status: a.status,
   mount: a.mount || '',
   cameraType: a.camera_type || '',
-  sensorType: a.sensor_type || ''
+  sensorType: a.sensor_type || '',
+  specificPolicy: a.specific_policy || ''
 });
 
 const mapAssetToDB = (a) => ({
@@ -43,7 +44,8 @@ const mapAssetToDB = (a) => ({
   status: a.status,
   mount: a.mount,
   camera_type: a.cameraType,
-  sensor_type: a.sensorType
+  sensor_type: a.sensorType,
+  specific_policy: a.specificPolicy
 });
 
 const mapBookingFromDB = (b) => ({
@@ -319,6 +321,7 @@ export const StoreProvider = ({ children }) => {
                   studioName: data?.studio_name || prev.studioName,
                   address: data?.address || prev.address,
                   favorites: prev.favorites || [],
+                  generalPolicy: data?.general_policy || prev.generalPolicy,
                   subscriptionTier: subData?.tier || data?.subscription_tier || prev.subscriptionTier || 'free',
                   subscriptionEnd: subData?.current_period_end || data?.subscription_end || prev.subscriptionEnd || null
                 };
@@ -425,24 +428,29 @@ export const StoreProvider = ({ children }) => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMsg = payload.new;
         setMessages(prev => {
-          // Prevent duplicates if already added optimistically
           if (prev.some(m => m.id === newMsg.id)) return prev;
-          
-          return [...prev, {
-            id: newMsg.id,
-            assetId: newMsg.asset_id,
-            assetTitle: newMsg.asset_title,
-            senderName: newMsg.sender_name,
-            text: newMsg.text,
-            timestamp: newMsg.timestamp,
-            createdAt: newMsg.created_at
-          }];
+          return [...prev, mapMessageFromDB(newMsg)];
         });
+      })
+      .subscribe();
+
+    const bookingsChannel = supabase.channel('public:bookings')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings' }, (payload) => {
+        const newBooking = payload.new;
+        setBookings(prev => {
+          if (prev.some(b => b.id === newBooking.id)) return prev;
+          return [mapBookingFromDB(newBooking), ...prev];
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings' }, (payload) => {
+        const updatedBooking = payload.new;
+        setBookings(prev => prev.map(b => b.id === updatedBooking.id ? mapBookingFromDB(updatedBooking) : b));
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(bookingsChannel);
     };
   }, []);
 
@@ -627,7 +635,8 @@ export const StoreProvider = ({ children }) => {
             citizenId: updatedUser.citizenId,
             studioName: updatedUser.studioName,
             address: updatedUser.address,
-            favorites: updatedUser.favorites
+            favorites: updatedUser.favorites,
+            generalPolicy: updatedUser.generalPolicy
           }
         });
       }
@@ -637,7 +646,8 @@ export const StoreProvider = ({ children }) => {
         phone: updatedUser.phone,
         avatar: updatedUser.avatar,
         citizen_id: updatedUser.citizenId,
-        studio_name: updatedUser.studioName
+        studio_name: updatedUser.studioName,
+        general_policy: updatedUser.generalPolicy
       }).eq('id', user.id);
       
       if (error) {
@@ -830,7 +840,7 @@ export const StoreProvider = ({ children }) => {
   const addBooking = async (newBooking) => {
     const bookingRecord = {
       id: `booking-${Date.now()}`,
-      status: 'pending',
+      status: newBooking.status || 'pending',
       renterId: user?.id || 'guest',
       createdAt: new Date().toISOString(),
       ...newBooking
