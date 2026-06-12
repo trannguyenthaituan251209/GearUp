@@ -1622,11 +1622,12 @@ export default function PlatformDashboard() {
                   assignee: null
                 };
               }
-              if (m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !m.text.includes('[ASSIGNED]')) {
+              const text = m.text || '';
+              if (m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !text.includes('[ASSIGNED]')) {
                 conversationsMap[uId].userName = m.senderName;
               }
-              if (m.text.startsWith('[ASSIGNED]')) {
-                conversationsMap[uId].assignee = m.text.replace('[ASSIGNED]', '').trim();
+              if (text.startsWith('[ASSIGNED]')) {
+                conversationsMap[uId].assignee = text.replace('[ASSIGNED]', '').trim();
               } else if (m.senderName === 'Admin CSKH') {
                 // If an admin replies, they auto-claim it (fallback for old messages)
                 if (!conversationsMap[uId].assignee) {
@@ -1637,9 +1638,25 @@ export default function PlatformDashboard() {
               conversationsMap[uId].lastMsgDate = m.timestamp;
             });
             
+            // Filter out AI messages for each conversation
+            Object.values(conversationsMap).forEach(conv => {
+              let lastRequestIndex = -1;
+              conv.messages.forEach((m, idx) => {
+                if ((m.text || '').includes('[CẦN CSKH]')) lastRequestIndex = idx;
+              });
+
+              if (lastRequestIndex !== -1) {
+                 conv.messages = conv.messages.slice(lastRequestIndex);
+              } else if (!conv.assignee) {
+                 conv.messages = [];
+              }
+              
+              conv.messages = conv.messages.filter(m => m.senderName !== 'GearUp AI');
+            });
+            
             const calculateSlaStatus = (conv) => {
-              const userMessages = conv.messages.filter(m => m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]'));
-              const lastAdminMessage = conv.messages.slice().reverse().find(m => m.senderName === 'Admin CSKH' || m.text.startsWith('[ASSIGNED]'));
+              const userMessages = conv.messages.filter(m => m.senderName !== 'Admin CSKH' && m.senderName !== 'GearUp AI' && !(m.text || '').startsWith('[ASSIGNED]'));
+              const lastAdminMessage = conv.messages.slice().reverse().find(m => m.senderName === 'Admin CSKH' || (m.text || '').startsWith('[ASSIGNED]'));
               const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
 
               if (!lastUserMessage) return { type: 'none' };
@@ -1659,7 +1676,7 @@ export default function PlatformDashboard() {
             };
 
             const unassignedList = Object.values(conversationsMap)
-              .filter(conv => conv.messages.some(m => m.text.includes('[CẦN CSKH]')) && !conv.assignee)
+              .filter(conv => conv.messages.some(m => (m.text || '').includes('[CẦN CSKH]')) && !conv.assignee)
               .sort((a, b) => b.lastMsgDate.localeCompare(a.lastMsgDate));
             
             const myAssignedList = Object.values(conversationsMap)
@@ -1767,7 +1784,10 @@ export default function PlatformDashboard() {
                       
                       {/* Message List */}
                       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
-                        {selectedConv.messages.filter(m => m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]') && !m.text.startsWith('[RESOLVED]')).map(msg => {
+                        {selectedConv.messages.filter(m => {
+                          const text = m.text || '';
+                          return m.senderName !== 'GearUp AI' && !text.startsWith('[ASSIGNED]') && !text.startsWith('[RESOLVED]');
+                        }).map(msg => {
                           const isAdmin = msg.senderName === 'Admin CSKH';
                           
                           return (
@@ -1776,7 +1796,7 @@ export default function PlatformDashboard() {
                                 {msg.senderName} • {msg.timestamp}
                               </div>
                               <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: isAdmin ? 'var(--color-primary)' : '#ffffff', color: isAdmin ? '#ffffff' : '#0f172a', border: isAdmin ? 'none' : '1px solid #e2e8f0', fontSize: '14px', lineHeight: '1.5', borderBottomRightRadius: isAdmin ? '4px' : '16px', borderBottomLeftRadius: isAdmin ? '16px' : '4px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                                {msg.text.replace('[CẦN CSKH]', '').trim()}
+                                {(msg.text || '').replace('[CẦN CSKH]', '').trim()}
                               </div>
                             </div>
                           );

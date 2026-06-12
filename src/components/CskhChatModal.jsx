@@ -5,7 +5,7 @@ import { generateAiResponse } from '../utils/geminiService';
 import ReactMarkdown from 'react-markdown';
 
 export default function CskhChatModal({ isOpen, onClose }) {
-  const { user, messages, addMessage } = useContext(StoreContext);
+  const { user, messages, addMessage, isAppLoading } = useContext(StoreContext);
   const [text, setText] = useState('');
   const scrollRef = useRef(null);
 
@@ -21,27 +21,32 @@ export default function CskhChatModal({ isOpen, onClose }) {
   }, [chatHistory, isTyping]);
 
   useEffect(() => {
-    if (isOpen && user && chatHistory.length === 0 && !isTyping) {
-      // Auto greet
+    if (isOpen && user && chatHistory.length === 0 && !isTyping && !isAppLoading) {
+      // Auto greet only when app is fully loaded to prevent race conditions with DB fetch
       setIsTyping(true);
       setTimeout(() => {
         addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', `Chào ${user.name}, tôi là trợ lý thông minh của GearUp. Hôm nay bạn cần tôi hỗ trợ vấn đề gì?`);
         setIsTyping(false);
       }, 1000);
     }
-  }, [isOpen, user, chatHistory.length]);
+  }, [isOpen, user, chatHistory.length, isAppLoading]);
 
   if (!isOpen) return null;
 
   let isHumanMode = false;
-  chatHistory.forEach(m => {
-    if (m.text.includes('[CẦN CSKH]') || m.senderName === 'Admin CSKH' || m.text.includes('[ASSIGNED]')) {
-      isHumanMode = true;
+  let lastRequestIndex = -1;
+  let lastResolvedIndex = -1;
+  chatHistory.forEach((m, idx) => {
+    const text = m.text || '';
+    if (text.includes('[CẦN CSKH]') || text.includes('[ASSIGNED]') || m.senderName === 'Admin CSKH') {
+      lastRequestIndex = idx;
     }
-    if (m.text.includes('[RESOLVED]')) {
-      isHumanMode = false;
+    if (text.includes('[RESOLVED]')) {
+      lastResolvedIndex = idx;
     }
   });
+  
+  isHumanMode = lastRequestIndex > lastResolvedIndex;
 
   const handleSendText = async (textToSend) => {
     if (!textToSend.trim() || !user) return;
@@ -141,9 +146,9 @@ export default function CskhChatModal({ isOpen, onClose }) {
               chatHistory.map((msg) => {
                 const isMe = msg.senderName === user.name;
                 const isAi = msg.senderName === 'GearUp AI';
-                
-                if (msg.text.startsWith('[RESOLVED]')) {
-                  const resolvedText = msg.text.replace('[RESOLVED]', '').trim();
+                const msgText = msg.text || '';
+                if (msgText.startsWith('[RESOLVED]')) {
+                  const resolvedText = msgText.replace('[RESOLVED]', '').trim();
                   return (
                     <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%' }}>
                       <div style={{ padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontSize: '12px', fontWeight: '500', textAlign: 'center', maxWidth: '260px' }}>
@@ -155,7 +160,7 @@ export default function CskhChatModal({ isOpen, onClose }) {
                 }
 
                 // Hide internal tags from UI
-                const displayText = msg.text.replace(/\[CẦN CSKH\]|\[ASSIGNED\]/g, '').trim();
+                const displayText = msgText.replace(/\[CẦN CSKH\]|\[ASSIGNED\]/g, '').trim();
                 if (!displayText) return null;
 
                 return (

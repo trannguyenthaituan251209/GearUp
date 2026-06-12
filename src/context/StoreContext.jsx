@@ -410,7 +410,35 @@ export const StoreProvider = ({ children }) => {
     fetchUserData();
   }, [user?.id, user?.email]);
 
+  // Realtime Subscription for Messages
+  useEffect(() => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (!isRealSupabase) return;
 
+    const channel = supabase.channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const newMsg = payload.new;
+        setMessages(prev => {
+          // Prevent duplicates if already added optimistically
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          
+          return [...prev, {
+            id: newMsg.id,
+            assetId: newMsg.asset_id,
+            assetTitle: newMsg.asset_title,
+            senderName: newMsg.sender_name,
+            text: newMsg.text,
+            timestamp: newMsg.timestamp,
+            createdAt: newMsg.created_at
+          }];
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Auth Functions
   const signUpUser = async (email, password, name, phone = '', address = '') => {
