@@ -33,7 +33,15 @@ export default function CskhChatModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const isHumanMode = chatHistory.some(m => m.text.includes('[CẦN CSKH]') || m.senderName === 'Admin CSKH');
+  let isHumanMode = false;
+  chatHistory.forEach(m => {
+    if (m.text.includes('[CẦN CSKH]') || m.senderName === 'Admin CSKH' || m.text.includes('[ASSIGNED]')) {
+      isHumanMode = true;
+    }
+    if (m.text.includes('[RESOLVED]')) {
+      isHumanMode = false;
+    }
+  });
 
   const handleSendText = async (textToSend) => {
     if (!textToSend.trim() || !user) return;
@@ -134,8 +142,20 @@ export default function CskhChatModal({ isOpen, onClose }) {
                 const isMe = msg.senderName === user.name;
                 const isAi = msg.senderName === 'GearUp AI';
                 
-                // Hide the [CẦN CSKH] tag from UI
-                const displayText = msg.text.replace('[CẦN CSKH]', '').trim();
+                if (msg.text.startsWith('[RESOLVED]')) {
+                  const resolvedText = msg.text.replace('[RESOLVED]', '').trim();
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '8px 0', width: '100%' }}>
+                      <div style={{ padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontSize: '12px', fontWeight: '500', textAlign: 'center', maxWidth: '260px' }}>
+                        <span style={{ color: '#0f172a', fontWeight: '600' }}>{resolvedText}</span>
+                        <div style={{ marginTop: '4px', color: '#10b981' }}>✨ AI đã quay trở lại và sẵn sàng hỗ trợ bạn!</div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Hide internal tags from UI
+                const displayText = msg.text.replace(/\[CẦN CSKH\]|\[ASSIGNED\]/g, '').trim();
                 if (!displayText) return null;
 
                 return (
@@ -185,15 +205,17 @@ export default function CskhChatModal({ isOpen, onClose }) {
                 <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                   <Bot size={16} />
                 </div>
-                <div style={{ padding: '10px 14px', borderRadius: '16px', backgroundColor: '#e0e7ff', borderBottomLeftRadius: '4px', fontSize: '14px', color: '#4f46e5', fontStyle: 'italic' }}>
-                  AI đang trả lời...
+                <div style={{ padding: '12px 16px', borderRadius: '16px', backgroundColor: '#e0e7ff', borderBottomLeftRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px', height: '36px', boxSizing: 'border-box' }}>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
                 </div>
               </div>
             )}
           </div>
 
           {/* Quick Replies */}
-          {chatHistory.length > 0 && !chatHistory.some(m => m.text.includes('[CẦN CSKH]')) && (
+          {chatHistory.length > 0 && !isHumanMode && (
             <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', overflowX: 'auto', backgroundColor: '#f8fafc', borderTop: '1px solid var(--color-border)' }} className="no-scrollbar">
               <button onClick={() => handleQuickReply('1. Hỗ trợ về đơn hàng')} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', whiteSpace: 'nowrap', cursor: 'pointer' }}>Đơn hàng</button>
               <button onClick={() => handleQuickReply('2. Trở thành đối tác')} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '16px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', whiteSpace: 'nowrap', cursor: 'pointer' }}>Đối tác</button>

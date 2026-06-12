@@ -974,3 +974,5 @@ textarea.form-control {
 /* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.typing-dot { animation: typing-dot 1.4s infinite ease-in-out both; width: 6px; height: 6px; border-radius: 50%; background-color: #4f46e5; margin: 0 2px; } .typing-dot:nth-child(1) { animation-delay: -0.32s; } .typing-dot:nth-child(2) { animation-delay: -0.16s; } @keyframes typing-dot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }

@@ -1750,13 +1750,24 @@ export default function PlatformDashboard() {
                 <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   {selectedConv ? (
                     <>
-                      <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', fontWeight: '600', backgroundColor: '#f8fafc' }}>
-                        Đang hỗ trợ: {selectedConv.userName}
+                      <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', fontWeight: '600', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>Đang hỗ trợ: {selectedConv.userName}</div>
+                        {selectedConv.assignee && (
+                          <button
+                            onClick={() => {
+                              addMessage(`cskh-${selectedConv.userId}`, 'Hỗ trợ Khách hàng', 'Hệ thống', `[RESOLVED] Cuộc hội thoại đã được đóng bởi ${user?.name}`);
+                              setSelectedCskhUserId(null);
+                            }}
+                            style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Kết thúc hỗ trợ
+                          </button>
+                        )}
                       </div>
                       
                       {/* Message List */}
                       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f1f5f9' }}>
-                        {selectedConv.messages.filter(m => m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]')).map(msg => {
+                        {selectedConv.messages.filter(m => m.senderName !== 'GearUp AI' && !m.text.startsWith('[ASSIGNED]') && !m.text.startsWith('[RESOLVED]')).map(msg => {
                           const isAdmin = msg.senderName === 'Admin CSKH';
                           
                           return (
