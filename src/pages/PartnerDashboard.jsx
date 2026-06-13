@@ -19,16 +19,26 @@ import {
   Check,
   X,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  RotateCcw,
+  StopCircle,
+  Calendar,
+  MessageSquare,
+  Inbox,
+  User,
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 import AssetEditModal from '../components/AssetEditModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
-  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails } = useContext(StoreContext);
+  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails, messages, addMessage } = useContext(StoreContext);
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [chatSelectedAssetId, setChatSelectedAssetId] = useState(null);
+  const [chatReplyText, setChatReplyText] = useState('');
 
   const [sessionViewedBookings] = useState(() => {
     try {
@@ -83,21 +93,49 @@ export default function PartnerDashboard() {
   const pausedAssetsCount = myAssets.filter(a => a.status === 'paused').length;
   const pendingRequestsCount = myBookings.filter(b => b.status === 'pending').length;
 
-  // Mock monthly revenue data for Chart
-  const monthlyRevenueData = [
-    { name: 'Tháng 12', Doanh_Thu: 3200000 },
-    { name: 'Tháng 1', Doanh_Thu: 4500000 },
-    { name: 'Tháng 2', Doanh_Thu: 5100000 },
-    { name: 'Tháng 3', Doanh_Thu: 4200000 },
-    { name: 'Tháng 4', Doanh_Thu: 6800000 },
-    { name: 'Tháng 5', Doanh_Thu: totalGrossRevenue || 7500000 }
-  ];
+  // Real monthly revenue data for Chart
+  const monthlyRevenueData = useMemo(() => {
+    const revenueByMonth = {};
+    const months = [];
+    // Get last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months.push({ key, name: `Tháng ${d.getMonth() + 1}`, Doanh_Thu: 0 });
+      revenueByMonth[key] = 0;
+    }
 
-  // Mock Asset Performance
-  const assetPerformanceData = myAssets.slice(0, 5).map(a => ({
-    name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title,
-    Luot_Thue: Math.floor(Math.random() * 20) + 1
-  }));
+    myBookings.forEach(b => {
+      if (['approved', 'paid', 'returned'].includes(b.status)) {
+        const d = new Date(b.createdAt || b.startDate);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (revenueByMonth[key] !== undefined) {
+          revenueByMonth[key] += b.totalPrice;
+        }
+      }
+    });
+
+    return months.map(m => ({ ...m, Doanh_Thu: revenueByMonth[m.key] }));
+  }, [myBookings]);
+
+  // Real Asset Performance
+  const assetPerformanceData = useMemo(() => {
+    const counts = {};
+    myBookings.forEach(b => {
+      if (['approved', 'paid', 'returned'].includes(b.status)) {
+        counts[b.assetId] = (counts[b.assetId] || 0) + 1;
+      }
+    });
+    
+    return myAssets
+      .map(a => ({
+        name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title,
+        Luot_Thue: counts[a.id] || 0
+      }))
+      .sort((a, b) => b.Luot_Thue - a.Luot_Thue)
+      .slice(0, 5);
+  }, [myAssets, myBookings]);
 
   // --- Shared Styles ---
   const glassCardStyle = {
@@ -144,41 +182,72 @@ export default function PartnerDashboard() {
         </div>
       </div>
 
-      {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+      {/* Charts & Upcoming Bookings */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
         <div style={glassCardStyle}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Tăng trưởng doanh thu</h3>
           <div style={{ height: '300px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `${value / 1000000}M`} />
-                <Tooltip formatter={(value) => formatPrice(value) + ' đ'} />
-                <Area type="monotone" dataKey="Doanh_Thu" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {monthlyRevenueData.some(d => d.Doanh_Thu > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `${value / 1000000}M`} />
+                  <Tooltip formatter={(value) => formatPrice(value) + ' đ'} />
+                  <Area type="monotone" dataKey="Doanh_Thu" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>Chưa có giao dịch nào</div>
+            )}
           </div>
         </div>
 
-        <div style={glassCardStyle}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Thiết bị được thuê nhiều</h3>
-          <div style={{ height: '300px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={assetPerformanceData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fontSize: 11, fill: '#64748b' }} />
-                <Tooltip />
-                <Bar dataKey="Luot_Thue" fill="var(--color-secondary)" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ ...glassCardStyle, flex: 1 }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Thiết bị được thuê nhiều</h3>
+            <div style={{ height: '200px', width: '100%' }}>
+              {assetPerformanceData.some(d => d.Luot_Thue > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={assetPerformanceData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip />
+                    <Bar dataKey="Luot_Thue" fill="var(--color-secondary)" radius={[0, 4, 4, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>Chưa có giao dịch nào</div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...glassCardStyle, flex: 1, overflowY: 'auto', maxHeight: '300px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Đơn thuê mới / sắp tới</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {myBookings.filter(b => b.status === 'pending' || (['approved', 'paid'].includes(b.status) && new Date(b.startDate) > new Date())).slice(0, 5).length > 0 ? (
+                myBookings.filter(b => b.status === 'pending' || (['approved', 'paid'].includes(b.status) && new Date(b.startDate) > new Date())).slice(0, 5).map(b => (
+                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-dark)' }}>{b.assetTitle}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Khách: {b.renterName}</div>
+                    </div>
+                    <span className={`badge badge-${b.status === 'paid' ? 'approved' : b.status}`} style={{ fontSize: '10px' }}>
+                      {b.status === 'pending' ? 'Chờ duyệt' : 'Sắp tới'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px 0' }}>Chưa có đơn thuê mới nào</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -317,7 +386,16 @@ export default function PartnerDashboard() {
                   <button 
                     className="btn btn-outline btn-sm"
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    onClick={() => updateAssetStatus(asset.id, asset.status === 'paused' ? 'available' : 'paused')}
+                    onClick={() => {
+                      if (asset.status !== 'paused') {
+                        const hasActive = bookings.some(b => b.assetId === asset.id && ['pending', 'approved', 'paid', 'renting'].includes(b.status));
+                        if (hasActive) {
+                          alert("Không thể tạm dừng vì thiết bị đang có đơn thuê chưa hoàn tất!");
+                          return;
+                        }
+                      }
+                      updateAssetStatus(asset.id, asset.status === 'paused' ? 'available' : 'paused');
+                    }}
                   >
                     {asset.status === 'paused' ? <><Eye size={14} /> Kích hoạt</> : <><EyeOff size={14} /> Tạm dừng</>}
                   </button>
@@ -349,115 +427,121 @@ export default function PartnerDashboard() {
     </div>
   );
 
-  const renderOrders = () => (
-    <div className="animate-fade-in">
-      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Quản lý Đơn Hàng</h2>
-      
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <select 
-          className="form-control" 
-          style={{ width: 'auto', minWidth: '150px' }}
-          value={orderFilterCategory}
-          onChange={(e) => setOrderFilterCategory(e.target.value)}
-        >
-          <option value="all">Tất cả danh mục</option>
-          <option value="sony_cam">Máy ảnh Sony</option>
-          <option value="canon_cam">Máy ảnh Canon</option>
-          <option value="fuji_cam">Máy ảnh Fujifilm</option>
-          <option value="nikon_cam">Máy ảnh Nikon</option>
-          <option value="sony_lens">Ống kính Sony</option>
-          <option value="canon_lens">Ống kính Canon</option>
-        </select>
+  const renderOrders = () => {
+    const rentingBookings = filteredAndSortedBookings.filter(b => (b.status === 'approved' || b.status === 'paid') && new Date(b.startDate) <= new Date());
+    const upcomingBookings = filteredAndSortedBookings.filter(b => b.status === 'pending' || ((b.status === 'approved' || b.status === 'paid') && new Date(b.startDate) > new Date()));
+    const historyBookings = filteredAndSortedBookings.filter(b => ['returned', 'rejected', 'cancelled'].includes(b.status));
 
-        <select 
-          className="form-control" 
-          style={{ width: 'auto', minWidth: '150px' }}
-          value={orderSortBy}
-          onChange={(e) => setOrderSortBy(e.target.value)}
-        >
-          <option value="newest">Đơn mới nhất</option>
-          <option value="price_asc">Tổng tiền: Thấp đến Cao</option>
-          <option value="price_desc">Tổng tiền: Cao đến Thấp</option>
-          <option value="date_asc">Ngày bắt đầu thuê: Tăng dần</option>
-          <option value="date_desc">Ngày bắt đầu thuê: Giảm dần</option>
-        </select>
+    const renderBookingList = (list, title) => (
+      <div style={{ ...glassCardStyle, marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--color-dark)' }}>{title} ({list.length})</h3>
+        {list.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {list.map(b => {
+              const isNewPaid = b.status === 'paid' && !sessionViewedBookings.includes(b.id);
+              const isRenting = new Date(b.startDate) <= new Date();
+              return (
+                <div key={b.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '8px', backgroundColor: '#f8fafc', gap: '16px' }}>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Mã Đơn: #{b.id.split('-')[1]}</div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {b.assetTitle}
+                    </div>
+                  </div>
+                  <div style={{ flex: '1 1 200px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      Khách: {b.renterName}
+                      {isNewPaid && <span style={{ backgroundColor: 'var(--color-warning)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>MỚI</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
+                  </div>
+                  <div style={{ flex: '1 1 150px' }}>
+                    <div style={{ fontSize: '13px' }}>Từ: {new Date(b.startDate).toLocaleDateString('vi-VN')}</div>
+                    <div style={{ fontSize: '13px' }}>Đến: {new Date(b.endDate).toLocaleDateString('vi-VN')}</div>
+                  </div>
+                  <div style={{ flex: '1 1 100px', textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--color-primary)' }}>{formatPrice(b.totalPrice)} đ</div>
+                    <span className={`badge badge-${b.status === 'paid' ? 'approved' : b.status}`} style={{ fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
+                      {b.status === 'pending' && 'Chờ Duyệt'}
+                      {(b.status === 'approved' || b.status === 'paid') && (isRenting ? 'Đang Thuê' : 'Đã Thanh Toán')}
+                      {b.status === 'returned' && 'Hoàn Tất'}
+                      {b.status === 'rejected' && 'Đã Hủy'}
+                      {b.status === 'cancelled' && 'Đã Hủy'}
+                    </span>
+                  </div>
+                  <div style={{ flex: '0 0 auto', display: 'flex', gap: '8px' }}>
+                    {b.status === 'pending' && (
+                      <>
+                        <button title="Duyệt đơn" className="btn btn-primary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'approved')}><Check size={16}/></button>
+                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '8px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={16}/></button>
+                      </>
+                    )}
+                    {(b.status === 'approved' || b.status === 'paid') && (
+                      <>
+                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '8px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><Trash2 size={16}/></button>
+                        {isRenting ? (
+                          <button title="Kết thúc đơn (Hoàn tất)" className="btn btn-primary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'returned')}><CheckCircle2 size={16}/></button>
+                        ) : (
+                          <button title="Nhận lại máy" className="btn btn-secondary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'returned')}><RotateCcw size={16}/></button>
+                        )}
+                      </>
+                    )}
+                    <button title="Nhắn tin cho khách" className="btn btn-outline btn-sm" style={{ padding: '8px' }} onClick={() => {
+                        setChatSelectedAssetId(b.assetId);
+                        setActiveTab('chat');
+                      }}><MessageSquare size={16}/></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+    );
 
-      <div style={{ ...glassCardStyle, padding: '0', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead style={{ backgroundColor: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-              <tr>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Mã Đơn</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Khách Hàng</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Thiết Bị</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Thời Gian</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng Tiền</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Trạng Thái</th>
-                <th style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right' }}>Hành Động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedBookings.length === 0 ? (
-                <tr>
-                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào phù hợp.</td>
-                </tr>
-              ) : (
-                filteredAndSortedBookings.map(b => {
-                  const isNewPaid = b.status === 'paid' && !sessionViewedBookings.includes(b.id);
-                  return (
-                    <tr key={b.id} style={{ 
-                      borderBottom: '1px solid var(--color-border)'
-                    }}>
-                      <td style={{ padding: '16px', fontSize: '14px', fontWeight: '500' }}>#{b.id.split('-')[1]}</td>
-                      <td style={{ padding: '16px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {b.renterName}
-                          {isNewPaid && (
-                            <span style={{ 
-                              backgroundColor: 'var(--color-warning)', color: '#fff', fontSize: '10px', 
-                              padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold',
-                              animation: 'pulse 2s infinite'
-                            }}>MỚI</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
-                      </td>
-                      <td style={{ padding: '16px', fontSize: '14px' }}>{b.assetTitle}</td>
-                    <td style={{ padding: '16px', fontSize: '14px' }}>
-                      <div>Từ: {new Date(b.startDate).toLocaleDateString('vi-VN')}</div>
-                      <div>Đến: {new Date(b.endDate).toLocaleDateString('vi-VN')}</div>
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)' }}>{formatPrice(b.totalPrice)} đ</td>
-                    <td style={{ padding: '16px' }}>
-                      <span className={`badge badge-${b.status === 'paid' ? 'approved' : b.status}`} style={{ fontSize: '11px' }}>
-                        {b.status === 'pending' && 'Chờ Duyệt'}
-                        {(b.status === 'approved' || b.status === 'paid') && (new Date() < new Date(b.startDate) ? 'Đã Thanh Toán' : 'Đang Thuê')}
-                        {b.status === 'returned' && 'Hoàn Tất'}
-                        {b.status === 'rejected' && 'Đã Hủy'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'right' }}>
-                      {b.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => updateBookingStatus(b.id, 'approved')}><Check size={14}/></button>
-                          <button className="btn btn-outline btn-sm" onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={14}/></button>
-                        </div>
-                      )}
-                      {(b.status === 'approved' || b.status === 'paid') && (
-                        <button className="btn btn-primary btn-sm" onClick={() => updateBookingStatus(b.id, 'returned')}>Nhận lại máy</button>
-                      )}
-                    </td>
-                  </tr>
-                );
-                })
-              )}
-            </tbody>
-          </table>
+    return (
+      <div className="animate-fade-in">
+        <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Quản lý Đơn Hàng</h2>
+        
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <select 
+            className="form-control" 
+            style={{ width: 'auto', minWidth: '150px' }}
+            value={orderFilterCategory}
+            onChange={(e) => setOrderFilterCategory(e.target.value)}
+          >
+            <option value="all">Tất cả danh mục</option>
+            <option value="sony_cam">Máy ảnh Sony</option>
+            <option value="canon_cam">Máy ảnh Canon</option>
+            <option value="fuji_cam">Máy ảnh Fujifilm</option>
+            <option value="nikon_cam">Máy ảnh Nikon</option>
+            <option value="sony_lens">Ống kính Sony</option>
+            <option value="canon_lens">Ống kính Canon</option>
+          </select>
+
+          <select 
+            className="form-control" 
+            style={{ width: 'auto', minWidth: '150px' }}
+            value={orderSortBy}
+            onChange={(e) => setOrderSortBy(e.target.value)}
+          >
+            <option value="newest">Đơn mới nhất</option>
+            <option value="price_asc">Tổng tiền: Thấp đến Cao</option>
+            <option value="price_desc">Tổng tiền: Cao đến Thấp</option>
+            <option value="date_asc">Ngày bắt đầu thuê: Tăng dần</option>
+            <option value="date_desc">Ngày bắt đầu thuê: Giảm dần</option>
+          </select>
         </div>
+
+        {renderBookingList(rentingBookings, "Đơn đang cho thuê")}
+        {renderBookingList(upcomingBookings, "Đơn sắp tới & Chờ duyệt")}
+        {renderBookingList(historyBookings, "Lịch sử đơn hàng")}
+
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderWallet = () => (
     <div className="animate-fade-in">
@@ -754,6 +838,181 @@ export default function PartnerDashboard() {
     </div>
   );
 
+  const renderChat = () => {
+    // Group messages for partner
+    const chatThreads = [];
+    const seenAssets = new Set();
+    
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      // Only include messages related to my assets
+      if (myAssetIds.includes(msg.assetId) && !seenAssets.has(msg.assetId)) {
+        seenAssets.add(msg.assetId);
+        const asset = myAssets.find(a => a.id === msg.assetId);
+        chatThreads.push({
+          assetId: msg.assetId,
+          assetTitle: msg.assetTitle,
+          assetImage: asset?.imageUrl || '/camera.png',
+          lastMessage: msg.text,
+          timestamp: msg.timestamp,
+          // Extract renter name from messages
+          renterName: messages.find(m => m.assetId === msg.assetId && m.senderName !== (user?.name || 'Partner'))?.senderName || 'Khách hàng'
+        });
+      }
+    }
+
+    let selectedThread = chatThreads.find(t => t.assetId === chatSelectedAssetId);
+    if (!selectedThread && chatSelectedAssetId) {
+      const asset = myAssets.find(a => a.id === chatSelectedAssetId);
+      if (asset) {
+        selectedThread = {
+          assetId: asset.id,
+          assetTitle: asset.title,
+          assetImage: asset.imageUrl || '/camera.png',
+          lastMessage: '',
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          renterName: 'Khách hàng'
+        };
+        chatThreads.unshift(selectedThread);
+      }
+    }
+    const threadMessages = messages.filter(m => m.assetId === chatSelectedAssetId);
+
+    const handleSendReply = (e) => {
+      e.preventDefault();
+      if (!chatReplyText.trim() || !chatSelectedAssetId) return;
+      
+      let finalMessage = chatReplyText.trim();
+      // Tự động đính kèm mã đơn nếu có
+      const relatedBooking = bookings.find(b => b.assetId === chatSelectedAssetId);
+      if (relatedBooking && !finalMessage.includes('[Đơn #')) {
+        const orderCode = relatedBooking.id.split('-')[1] || relatedBooking.id;
+        finalMessage = `[Đơn #${orderCode}] ${finalMessage}`;
+      }
+
+      addMessage(
+        chatSelectedAssetId,
+        selectedThread?.assetTitle || 'Thiết bị',
+        user?.name || 'Partner',
+        finalMessage
+      );
+      setChatReplyText('');
+    };
+
+    return (
+      <div className="animate-fade-in" style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Tin Nhắn & Hỗ Trợ</h2>
+        
+        <div style={{ ...glassCardStyle, padding: 0, display: 'grid', gridTemplateColumns: '1fr 2fr', flexGrow: 1, overflow: 'hidden' }} className="chat-layout">
+          
+          <aside style={{ borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
+              <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquare size={18} style={{ color: 'var(--color-primary)' }} />
+                Danh Sách Khách Hàng
+              </h3>
+            </div>
+            
+            <div style={{ flexGrow: 1, overflowY: 'auto', minHeight: 0 }}>
+              {chatThreads.length > 0 ? (
+                chatThreads.map((thread) => (
+                  <div 
+                    key={thread.assetId}
+                    onClick={() => setChatSelectedAssetId(thread.assetId)}
+                    style={{
+                      padding: '16px',
+                      borderBottom: '1px solid var(--color-border)',
+                      cursor: 'pointer',
+                      backgroundColor: chatSelectedAssetId === thread.assetId ? 'var(--color-primary-light)' : 'transparent',
+                      transition: 'var(--transition-fast)',
+                      display: 'flex',
+                      gap: '12px',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <img 
+                      src={thread.assetImage} 
+                      alt={thread.assetTitle} 
+                      style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} 
+                    />
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <h4 style={{ fontSize: '13px', margin: 0, fontWeight: '700', color: 'var(--color-dark)' }}>{thread.renterName}</h4>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{thread.timestamp}</span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--color-text-main)', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        "{thread.lastMessage}"
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có tin nhắn nào.</div>
+              )}
+            </div>
+          </aside>
+
+          <section style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+            {chatSelectedAssetId && selectedThread ? (
+              <>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src={selectedThread.assetImage} alt="asset" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>{selectedThread.renterName}</h3>
+                    <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: 0 }}>Quan tâm: <strong>{selectedThread.assetTitle}</strong></p>
+                  </div>
+                </div>
+
+                <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                  {threadMessages.map((msg) => {
+                    const isMe = msg.senderName === (user?.name || 'Partner');
+                    return (
+                      <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{msg.senderName} • {msg.timestamp}</div>
+                        <div style={{
+                          padding: '12px 16px',
+                          borderRadius: isMe ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
+                          backgroundColor: isMe ? 'var(--color-primary)' : '#ffffff',
+                          color: isMe ? '#ffffff' : 'var(--color-text-main)',
+                          fontSize: '14px',
+                          border: isMe ? 'none' : '1px solid var(--color-border)',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <form onSubmit={handleSendReply} style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '12px', flexShrink: 0 }}>
+                  <input 
+                    type="text"
+                    className="form-control"
+                    placeholder="Nhập phản hồi..."
+                    value={chatReplyText}
+                    onChange={(e) => setChatReplyText(e.target.value)}
+                    style={{ flexGrow: 1, borderRadius: '99px' }}
+                    required
+                  />
+                  <button type="submit" className="btn btn-primary" style={{ borderRadius: '50%', width: '40px', height: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ArrowRight size={16} />
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>
+                <MessageSquare size={48} style={{ strokeWidth: '1', marginBottom: '16px' }} />
+                <p>Chọn một cuộc trò chuyện để bắt đầu.</p>
+              </div>
+            )}
+          </section>
+
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: 'calc(100vh - 70px)', backgroundColor: '#f8fafc' }}>
       
@@ -806,6 +1065,7 @@ export default function PartnerDashboard() {
             { id: 'overview', icon: LayoutDashboard, label: 'Tổng Quan' },
             { id: 'listings', icon: Package, label: 'Thiết Bị Của Tôi' },
             { id: 'orders', icon: ShoppingCart, label: 'Đơn Hàng' },
+            { id: 'chat', icon: MessageSquare, label: 'Tin Nhắn' },
             { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' },
             { id: 'add-new', icon: PlusCircle, label: 'Đăng Thiết Bị' },
           ].map(item => {
@@ -844,10 +1104,21 @@ export default function PartnerDashboard() {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'listings' && renderListings()}
         {activeTab === 'orders' && renderOrders()}
+        {activeTab === 'chat' && renderChat()}
         {activeTab === 'wallet' && renderWallet()}
         {activeTab === 'add-new' && renderAddNew()}
       </main>
 
+      <style>{`
+        @media (max-width: 768px) {
+          .chat-layout {
+            grid-template-columns: 1fr !important;
+          }
+          .chat-layout aside {
+            max-height: 200px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

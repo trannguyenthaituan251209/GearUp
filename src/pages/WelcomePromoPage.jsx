@@ -266,7 +266,7 @@ export default function WelcomePromoPage({ setCurrentPage, setSelectedAssetId, s
 
     if (matched) {
       if (setSelectedAssetId) setSelectedAssetId(matched.id);
-      setCurrentPage('asset-detail');
+      setCurrentPage('asset-detail', matched.id);
     } else {
       if (setFilters) {
         setFilters({

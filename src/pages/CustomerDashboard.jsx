@@ -16,8 +16,55 @@ import {
   ChevronRight,
   Sparkles,
   Inbox,
-  Star
+  Star,
+  Phone
 } from 'lucide-react';
+
+const PartnerContactInfo = ({ assetId, isVisible }) => {
+  const { assets } = useContext(StoreContext);
+  const asset = assets.find(a => a.id === assetId);
+  const [partnerProfile, setPartnerProfile] = useState(null);
+  const [show, setShow] = useState(false);
+
+  if (!asset || !isVisible) return null;
+
+  const handleShow = async () => {
+    if (show) {
+      setShow(false);
+      return;
+    }
+    import('../supabaseClient').then(({ supabase }) => {
+      supabase.from('profiles').select('phone, name').eq('id', asset.ownerId).single().then(({ data }) => {
+        if (data) {
+          setPartnerProfile({
+            phone: data.phone || 'Chưa cập nhật',
+            name: data.name || asset.ownerName
+          });
+        } else {
+          setPartnerProfile({
+            phone: 'Chưa cập nhật',
+            name: asset.ownerName
+          });
+        }
+        setShow(true);
+      });
+    });
+  };
+
+  return (
+    <div style={{ marginTop: '8px' }}>
+      <button onClick={handleShow} className="btn btn-sm btn-outline" style={{ fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: 'var(--color-border)', color: 'var(--color-text-main)' }}>
+        <User size={12} /> {show ? 'Ẩn thông tin' : 'Hiển thị thông tin đối tác'}
+      </button>
+      {show && partnerProfile && (
+        <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'var(--color-primary-light)', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div><strong>{partnerProfile.name}</strong></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={12} /> {partnerProfile.phone}</div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function CustomerDashboard() {
   const { user, bookings, updateBookingStatus, messages, addMessage, assets, submitReview } = useContext(StoreContext);
@@ -113,7 +160,22 @@ export default function CustomerDashboard() {
 
   // Filter messages for current thread
   const threadMessages = messages.filter(m => m.assetId === selectedAssetId);
-  const selectedThread = chatThreads.find(t => t.assetId === selectedAssetId);
+  let selectedThread = chatThreads.find(t => t.assetId === selectedAssetId);
+  if (!selectedThread && selectedAssetId) {
+    const asset = assets.find(a => a.id === selectedAssetId);
+    if (asset) {
+      selectedThread = {
+        assetId: asset.id,
+        assetTitle: asset.title,
+        assetImage: asset.imageUrl || '/camera.png',
+        ownerName: asset.ownerName || 'Đối tác GearUp',
+        lastMessage: '',
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      };
+      // We also should visually prepend it to chatThreads so it shows up in the sidebar!
+      chatThreads.unshift(selectedThread);
+    }
+  }
 
   const handleCancelBooking = (bookingId) => {
     if (window.confirm('Bạn có chắc chắn muốn hủy yêu cầu thuê này?')) {
@@ -133,12 +195,20 @@ export default function CustomerDashboard() {
     e.preventDefault();
     if (!replyText.trim() || !selectedAssetId) return;
     
+    let finalMessage = replyText.trim();
+    // Tự động đính kèm mã đơn nếu có
+    const relatedBooking = myBookings.find(b => b.assetId === selectedAssetId);
+    if (relatedBooking && !finalMessage.includes('[Đơn #')) {
+      const orderCode = relatedBooking.id.split('-')[1] || relatedBooking.id;
+      finalMessage = `[Đơn #${orderCode}] ${finalMessage}`;
+    }
+
     // Add message
     addMessage(
       selectedAssetId,
       selectedThread?.assetTitle || 'Thiết bị',
       user?.name || 'Khách hàng',
-      replyText.trim()
+      finalMessage
     );
     setReplyText('');
   };
@@ -329,10 +399,7 @@ export default function CustomerDashboard() {
                             <Calendar size={13} />
                             Thời gian thuê: <strong>{booking.startDate}</strong> đến <strong>{booking.endDate}</strong>
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <User size={13} />
-                            Liên hệ: <strong>{booking.renterName}</strong> ({booking.renterContact})
-                          </span>
+                          <PartnerContactInfo assetId={booking.assetId} isVisible={['pending', 'approved', 'paid', 'renting'].includes(booking.status)} />
                         </div>
                       </div>
                     </div>
@@ -469,7 +536,7 @@ export default function CustomerDashboard() {
                 </h3>
               </div>
               
-              <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {chatThreads.length > 0 ? (
                   chatThreads.map((thread) => (
                     <div 
@@ -516,7 +583,7 @@ export default function CustomerDashboard() {
             </aside>
 
             {/* Right container: Message list & Text input */}
-            <section style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc' }}>
+            <section style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
               {selectedAssetId && selectedThread ? (
                 <>
                   {/* Top Bar info */}
@@ -540,7 +607,7 @@ export default function CustomerDashboard() {
                   </div>
 
                   {/* Messages list */}
-                  <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
                     {threadMessages.map((msg) => {
                       const isMe = msg.senderName === (user?.name || 'Khách hàng');
                       return (
@@ -581,7 +648,8 @@ export default function CustomerDashboard() {
                     borderTop: '1px solid var(--color-border)',
                     display: 'flex',
                     gap: '12px',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    flexShrink: 0
                   }}>
                     <input 
                       type="text"

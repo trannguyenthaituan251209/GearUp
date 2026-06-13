@@ -977,3 +977,10 @@ textarea.form-control {
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 .typing-dot { animation: typing-dot 1.4s infinite ease-in-out both; width: 6px; height: 6px; border-radius: 50%; background-color: #4f46e5; margin: 0 2px; } .typing-dot:nth-child(1) { animation-delay: -0.32s; } .typing-dot:nth-child(2) { animation-delay: -0.16s; } @keyframes typing-dot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+
+/* React Datepicker Custom Styles */
+.custom-datepicker-container .react-datepicker { width: 100%; border: 1px solid var(--color-border); font-family: inherit; }
+.custom-datepicker-container .react-datepicker__month-container { width: 100%; }
+.custom-datepicker-container .react-datepicker__day--excluded { background-color: #fee2e2; color: #ef4444; text-decoration: line-through; opacity: 0.7; }
+.custom-datepicker-container .react-datepicker__day--disabled { background-color: #f1f5f9; color: #94a3b8; }

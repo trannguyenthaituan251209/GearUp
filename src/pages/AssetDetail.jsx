@@ -1,11 +1,14 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { StoreContext } from '../context/StoreContext';
 import AssetCard, { formatPrice } from '../components/AssetCard';
 import { ArrowLeft, MessageSquare, Heart, Star, User } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { vi } from 'date-fns/locale';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
-  const { assets, addMessage, messages, user, favorites = [], setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
+  const { assets, bookings, addMessage, messages, user, favorites = [], setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
 
@@ -118,6 +121,50 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       setTotalPrice(0);
     }
   }, [startDate, endDate, asset?.pricePerDay]);
+
+  const assetBookings = (bookings || []).filter(b => b.assetId === assetId && ['pending', 'approved', 'paid', 'renting'].includes(b.status));
+
+  const bookedDates = useMemo(() => {
+    let dates = [];
+    assetBookings.forEach(b => {
+      let start = new Date(b.startDate);
+      let end = new Date(b.endDate);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+      
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      let d = new Date(start);
+      while(d <= end) {
+        dates.push(new Date(d));
+        d.setDate(d.getDate() + 1);
+      }
+    });
+    return dates;
+  }, [assetBookings]);
+
+  const onChangeDatePicker = (dates) => {
+    const [start, end] = dates;
+    
+    // Check if the selected range includes any booked dates
+    if (start && end) {
+      let d = new Date(start);
+      let hasConflict = false;
+      while(d <= end) {
+        if (bookedDates.some(bd => bd.getTime() === d.getTime())) {
+          hasConflict = true;
+          break;
+        }
+        d.setDate(d.getDate() + 1);
+      }
+      if (hasConflict) {
+        alert("Khoảng thời gian bạn chọn có chứa ngày đã được thuê. Vui lòng chọn lại!");
+        return;
+      }
+    }
+
+    setStartDate(start ? start.toISOString().split('T')[0] : '');
+    setEndDate(end ? end.toISOString().split('T')[0] : '');
+  };
 
   // If asset not found
   if (!asset) {
@@ -247,15 +294,27 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
                 </div>
               ) : (
                 <form onSubmit={handleBookingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Ngày bắt đầu</label>
-                      <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} required style={{ padding: '10px' }} />
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '14px', color: 'var(--color-text-muted)', display: 'block', marginBottom: '8px' }}>Lịch trạng thái (Chọn ngày bắt đầu và kết thúc)</label>
+                    <div className="custom-datepicker-container">
+                      <DatePicker
+                        selected={startDate ? new Date(startDate) : null}
+                        onChange={onChangeDatePicker}
+                        startDate={startDate ? new Date(startDate) : null}
+                        endDate={endDate ? new Date(endDate) : null}
+                        selectsRange
+                        inline
+                        locale={vi}
+                        excludeDates={asset.status === 'paused' ? [] : bookedDates}
+                        minDate={new Date()}
+                        filterDate={asset.status === 'paused' ? () => false : undefined}
+                      />
                     </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Ngày trả</label>
-                      <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} required style={{ padding: '10px' }} />
-                    </div>
+                    {asset.status === 'paused' && (
+                      <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--color-danger)' }}>
+                        * Thiết bị hiện đang tạm dừng cho thuê.
+                      </div>
+                    )}
                   </div>
 
                   <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

@@ -1175,7 +1175,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                 }}
                 onClick={() => {
                   setSelectedAssetId(item.id);
-                  setCurrentPage('asset-detail');
+                  setCurrentPage('asset-detail', item.id);
                 }}
                 onMouseOver={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
                 onMouseOut={(e) => e.currentTarget.style.borderColor = '#000000'}
@@ -1379,7 +1379,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                   }}
                   onClick={() => {
                     setSelectedAssetId(asset.id);
-                    setCurrentPage('asset-detail');
+                    setCurrentPage('asset-detail', asset.id);
                   }}
                   onMouseOver={(e) => e.currentTarget.style.borderColor = '#ea580c'}
                   onMouseOut={(e) => e.currentTarget.style.borderColor = '#000000'}
@@ -1747,7 +1747,7 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
                       asset={asset} 
                       onSelect={() => {
                         setSelectedAssetId(asset.id);
-                        setCurrentPage('asset-detail');
+                        setCurrentPage('asset-detail', asset.id);
                       }} 
                     />
                   ))}

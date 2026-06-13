@@ -158,7 +158,7 @@ export default function Market({ setCurrentPage, setSelectedAssetId, filters, se
                   asset={asset} 
                   onSelect={() => {
                     setSelectedAssetId(asset.id);
-                    setCurrentPage('asset-detail');
+                    setCurrentPage('asset-detail', asset.id);
                   }} 
                 />
               ))}

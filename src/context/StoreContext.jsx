@@ -349,10 +349,24 @@ export const StoreProvider = ({ children }) => {
       const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
       if (isRealSupabase) {
         try {
+          const { data: profilesData } = await supabase.from('profiles').select('id, name, studio_name, avatar_url');
+          const profilesMap = {};
+          if (profilesData) {
+            profilesData.forEach(p => profilesMap[p.id] = p);
+          }
+
           const { data: assetsData, error: assetsError } = await supabase.from('assets').select('*');
           if (!assetsError && assetsData) {
             // Filter out old simulated mock assets by ensuring owner_id is a valid UUID
-            assetsFetched = assetsData.map(mapAssetFromDB).filter(a => a.ownerId && a.ownerId.length === 36);
+            assetsFetched = assetsData.map(a => {
+              const mappedAsset = mapAssetFromDB(a);
+              if (profilesMap[mappedAsset.ownerId]) {
+                const profile = profilesMap[mappedAsset.ownerId];
+                mappedAsset.ownerName = profile.studio_name || profile.name || mappedAsset.ownerName;
+                if (profile.avatar_url) mappedAsset.ownerAvatar = profile.avatar_url;
+              }
+              return mappedAsset;
+            }).filter(a => a.ownerId && a.ownerId.length === 36);
           } else if (assetsError) {
             console.log('[Supabase] Failed to fetch assets (schema might not exist yet):', assetsError.message);
           }
