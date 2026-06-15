@@ -8,7 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { vi } from 'date-fns/locale';
 
 export default function AssetDetail({ assetId, setCurrentPage }) {
-  const { assets, bookings, addMessage, messages, user, favorites = [], setCurrentCheckout, toggleFavorite } = useContext(StoreContext);
+  const { assets, bookings, addMessage, messages, user, favorites = [], setCurrentCheckout, toggleFavorite, setShowAuthModal } = useContext(StoreContext);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
 
@@ -182,6 +182,11 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
 
   const handleBookingSubmit = (e) => {
     e.preventDefault();
+    if (!user) {
+      alert("Vui lòng đăng nhập để tiếp tục thuê thiết bị.");
+      setShowAuthModal(true);
+      return;
+    }
     if (!startDate || !endDate) {
       alert('Vui lòng chọn ngày bắt đầu và ngày kết thúc!');
       return;
@@ -389,7 +394,14 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
               <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>{realOwnerName || asset.ownerName}</div>
               <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '12px' }}>Online 7 Giờ Trước</div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '14px', borderRadius: '4px', flex: '1 1 auto', justifyContent: 'center' }} onClick={() => setShowChatModal(true)}>
+                <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '14px', borderRadius: '4px', flex: '1 1 auto', justifyContent: 'center' }} onClick={() => {
+                  if (!user) {
+                    alert("Vui lòng đăng nhập để nhắn tin với chủ thiết bị.");
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  setShowChatModal(true);
+                }}>
                   <MessageSquare size={14} /> Chat Ngay
                 </button>
                 <button 

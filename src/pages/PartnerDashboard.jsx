@@ -723,6 +723,11 @@ export default function PartnerDashboard() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, ...).');
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -751,6 +756,10 @@ export default function PartnerDashboard() {
 
   const handleAddNewSubmit = (e) => {
     e.preventDefault();
+    if (parseInt(newPricePerDay) < 0) {
+      alert('Giá thuê không được là số âm.');
+      return;
+    }
     const specsArray = newSpecsText.split(',').map(s => s.trim()).filter(s => s !== '');
     addAsset({
       title: newTitle,
@@ -834,7 +843,7 @@ export default function PartnerDashboard() {
             </div>
             <div className="form-group">
               <label>Giá Thuê / Ngày</label>
-              <input type="number" className="form-control" value={newPricePerDay} onChange={e => setNewPricePerDay(e.target.value)} required />
+              <input type="number" min="0" onWheel={(e) => e.target.blur()} className="form-control" value={newPricePerDay} onChange={e => setNewPricePerDay(e.target.value)} required />
             </div>
           </div>
 
