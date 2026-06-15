@@ -984,3 +984,21 @@ textarea.form-control {
 .custom-datepicker-container .react-datepicker__month-container { width: 100%; }
 .custom-datepicker-container .react-datepicker__day--excluded { background-color: #fee2e2; color: #ef4444; text-decoration: line-through; opacity: 0.7; }
 .custom-datepicker-container .react-datepicker__day--disabled { background-color: #f1f5f9; color: #94a3b8; }
+
+@media (max-width: 768px) {
+  .chat-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .chat-layout.show-sidebar .chat-main {
+    display: none !important;
+  }
+  .chat-layout:not(.show-sidebar) .chat-sidebar {
+    display: none !important;
+  }
+  .mobile-back-btn {
+    display: flex !important;
+  }
+}
+.mobile-back-btn {
+  display: none;
+}

@@ -1,8 +1,14 @@
--- Enable realtime for tables
-begin;
-  -- Remove tables from publication if they exist to avoid duplicate errors, then add them
-  -- Note: You can just safely run the ADD TABLE if they aren't there yet
-  alter publication supabase_realtime add table messages;
-  alter publication supabase_realtime add table bookings;
-  alter publication supabase_realtime add table assets;
-commit;
+-- Enable Realtime for the messages table
+BEGIN;
+  DO $$ 
+  BEGIN 
+    IF NOT EXISTS (
+      SELECT 1 
+      FROM pg_publication_tables 
+      WHERE pubname = 'supabase_realtime' 
+      AND tablename = 'messages'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+    END IF;
+  END $$;
+COMMIT;

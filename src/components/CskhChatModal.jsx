@@ -25,7 +25,7 @@ export default function CskhChatModal({ isOpen, onClose }) {
       // Auto greet only when app is fully loaded to prevent race conditions with DB fetch
       setIsTyping(true);
       setTimeout(() => {
-        addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', `Chào ${user.name}, tôi là trợ lý thông minh của GearUp. Hôm nay bạn cần tôi hỗ trợ vấn đề gì?`);
+        addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', `Chào ${user.name}, tôi là trợ lý thông minh của GearUp. Hôm nay bạn cần tôi hỗ trợ vấn đề gì?`, 'admin', user.id, user.id);
         setIsTyping(false);
       }, 1000);
     }
@@ -52,7 +52,7 @@ export default function CskhChatModal({ isOpen, onClose }) {
     if (!textToSend.trim() || !user) return;
     
     // 1. Send user message
-    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, textToSend);
+    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, textToSend, user.id, 'admin', user.id);
     setText('');
 
     // If requesting human or already in human mode, don't trigger AI
@@ -60,7 +60,7 @@ export default function CskhChatModal({ isOpen, onClose }) {
       if (textToSend.includes('[CẦN CSKH]')) {
          setIsTyping(true);
          setTimeout(() => {
-           addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', 'Hệ thống đang kết nối bạn với nhân viên CSKH. Vui lòng đợi trong ít phút nhé!');
+           addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', 'Hệ thống đang kết nối bạn với nhân viên CSKH. Vui lòng đợi trong ít phút nhé!', 'admin', user.id, user.id);
            setIsTyping(false);
          }, 1000);
       }
@@ -70,12 +70,12 @@ export default function CskhChatModal({ isOpen, onClose }) {
     // 2. Trigger AI
     setIsTyping(true);
     const aiReply = await generateAiResponse(textToSend);
-    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', aiReply);
+    addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', 'GearUp AI', aiReply, 'admin', user.id, user.id);
     setIsTyping(false);
 
     // Auto hand-off if AI decides it's too complex
     if (aiReply.toLowerCase().includes('chuyển cho nhân viên cskh') || aiReply.toLowerCase().includes('hỗ trợ trực tiếp')) {
-       addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, '[CẦN CSKH]');
+       addMessage(cskhAssetId, 'Hỗ trợ Khách hàng', user.name, '[CẦN CSKH]', user.id, 'admin', user.id);
     }
   };
 

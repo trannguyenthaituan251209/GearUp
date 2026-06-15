@@ -91,19 +91,23 @@ CREATE TABLE IF NOT EXISTS public.messages (
   id TEXT PRIMARY KEY,
   asset_id TEXT NOT NULL,
   asset_title TEXT NOT NULL,
+  sender_id TEXT,
+  receiver_id TEXT,
+  customer_id TEXT,
   sender_name TEXT NOT NULL,
   text TEXT NOT NULL,
+  status TEXT DEFAULT 'sent',
   timestamp TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
 );
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Cho phép đọc tin nhắn liên quan" ON public.messages
-  FOR SELECT USING (true);
+CREATE POLICY "Cho phép đọc tin nhắn của chính mình" ON public.messages
+  FOR SELECT USING (auth.uid()::text = sender_id OR auth.uid()::text = receiver_id);
 
 CREATE POLICY "Cho phép gửi tin nhắn mới" ON public.messages
-  FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (auth.uid()::text = sender_id);
 
 
 -- ==========================================

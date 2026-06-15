@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo, useEffect } from 'react';
+import React, { useContext, useState, useMemo, useEffect, useRef } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
 import { 
@@ -27,13 +27,14 @@ import {
   Inbox,
   User,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  CheckCheck
 } from 'lucide-react';
 import AssetEditModal from '../components/AssetEditModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
-  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails, messages, addMessage } = useContext(StoreContext);
+  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent } = useContext(StoreContext);
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -68,6 +69,26 @@ export default function PartnerDashboard() {
   const myAssetIds = useMemo(() => myAssets.map(a => a.id), [myAssets]);
 
   const myBookings = useMemo(() => bookings.filter(b => myAssetIds.includes(b.assetId)), [bookings, myAssetIds]);
+
+  const threadMessages = useMemo(() => messages.filter(m => m.customerId === chatSelectedAssetId && myAssetIds.includes(m.assetId)), [messages, chatSelectedAssetId, myAssetIds]);
+
+  const chatContainerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatSelectedAssetId && activeTab === 'chat') {
+      const hasUnseen = threadMessages.some(m => m.receiverId === user?.id && m.status === 'sent');
+      if (hasUnseen) {
+        markMessagesAsSeen(chatSelectedAssetId, false);
+      }
+    }
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  }, [chatSelectedAssetId, activeTab, threadMessages.length, markMessagesAsSeen, user?.id]);
 
   useEffect(() => {
     if (activeTab === 'orders' && myBookings.length > 0) {
@@ -489,7 +510,7 @@ export default function PartnerDashboard() {
                       </>
                     )}
                     <button title="Nhắn tin cho khách" className="btn btn-outline btn-sm" style={{ padding: '8px' }} onClick={() => {
-                        setChatSelectedAssetId(b.assetId);
+                        setChatSelectedAssetId(b.renterId);
                         setActiveTab('chat');
                       }}><MessageSquare size={16}/></button>
                   </div>
@@ -839,62 +860,75 @@ export default function PartnerDashboard() {
   );
 
   const renderChat = () => {
-    // Group messages for partner
+    console.log('[DEBUG_RENDER_CHAT] messages.length:', messages.length, 'myAssetIds:', myAssetIds, 'user.id:', user?.id);
+    
     const chatThreads = [];
-    const seenAssets = new Set();
+    const seenCustomers = new Set();
     
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
-      // Only include messages related to my assets
-      if (myAssetIds.includes(msg.assetId) && !seenAssets.has(msg.assetId)) {
-        seenAssets.add(msg.assetId);
+      
+      // Ensure message belongs to one of my assets
+      if (myAssetIds.includes(msg.assetId) && !seenCustomers.has(msg.customerId)) {
+        seenCustomers.add(msg.customerId);
+        
         const asset = myAssets.find(a => a.id === msg.assetId);
         chatThreads.push({
-          assetId: msg.assetId,
+          threadId: msg.customerId, // Group strictly by customerId
+          assetId: msg.assetId, // Keep latest asset for context
           assetTitle: msg.assetTitle,
           assetImage: asset?.imageUrl || '/camera.png',
           lastMessage: msg.text,
           timestamp: msg.timestamp,
-          // Extract renter name from messages
-          renterName: messages.find(m => m.assetId === msg.assetId && m.senderName !== (user?.name || 'Partner'))?.senderName || 'Khách hàng'
+          customerId: msg.customerId,
+          renterName: messages.find(m => m.customerId === msg.customerId && m.senderName !== (user?.name || 'Partner'))?.senderName || 'Khách hàng'
         });
       }
     }
 
-    let selectedThread = chatThreads.find(t => t.assetId === chatSelectedAssetId);
+    let selectedThread = chatThreads.find(t => t.threadId === chatSelectedAssetId);
     if (!selectedThread && chatSelectedAssetId) {
-      const asset = myAssets.find(a => a.id === chatSelectedAssetId);
-      if (asset) {
+      // Fallback for new unlisted threads
+      const msg = messages.find(m => m.customerId === chatSelectedAssetId && myAssetIds.includes(m.assetId));
+      if (msg) {
+        const asset = myAssets.find(a => a.id === msg.assetId);
         selectedThread = {
+          threadId: chatSelectedAssetId,
           assetId: asset.id,
           assetTitle: asset.title,
           assetImage: asset.imageUrl || '/camera.png',
           lastMessage: '',
           timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          renterName: 'Khách hàng'
+          renterName: 'Khách hàng',
+          customerId: chatSelectedAssetId
         };
         chatThreads.unshift(selectedThread);
       }
     }
-    const threadMessages = messages.filter(m => m.assetId === chatSelectedAssetId);
+    
+    const handleTyping = (e) => {
+      setChatReplyText(e.target.value);
+      const threadId = `${user?.id}_${chatSelectedAssetId}`;
+      sendTypingEvent(threadId, true, 'partner');
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingEvent(threadId, false, 'partner');
+      }, 2000);
+    };
 
     const handleSendReply = (e) => {
       e.preventDefault();
       if (!chatReplyText.trim() || !chatSelectedAssetId) return;
       
       let finalMessage = chatReplyText.trim();
-      // Tự động đính kèm mã đơn nếu có
-      const relatedBooking = bookings.find(b => b.assetId === chatSelectedAssetId);
-      if (relatedBooking && !finalMessage.includes('[Đơn #')) {
-        const orderCode = relatedBooking.id.split('-')[1] || relatedBooking.id;
-        finalMessage = `[Đơn #${orderCode}] ${finalMessage}`;
-      }
-
       addMessage(
-        chatSelectedAssetId,
-        selectedThread?.assetTitle || 'Thiết bị',
+        selectedThread.assetId,
+        selectedThread.assetTitle,
         user?.name || 'Partner',
-        finalMessage
+        finalMessage,
+        user?.id,
+        selectedThread.customerId,
+        selectedThread.customerId
       );
       setChatReplyText('');
     };
@@ -915,19 +949,22 @@ export default function PartnerDashboard() {
             
             <div style={{ flexGrow: 1, overflowY: 'auto', minHeight: 0 }}>
               {chatThreads.length > 0 ? (
-                chatThreads.map((thread) => (
+                chatThreads.map((thread) => {
+                  const unseenCount = messages.filter(m => m.customerId === thread.threadId && m.receiverId === user?.id && m.status === 'sent').length;
+                  return (
                   <div 
-                    key={thread.assetId}
-                    onClick={() => setChatSelectedAssetId(thread.assetId)}
+                    key={thread.threadId}
+                    onClick={() => setChatSelectedAssetId(thread.threadId)}
                     style={{
                       padding: '16px',
                       borderBottom: '1px solid var(--color-border)',
                       cursor: 'pointer',
-                      backgroundColor: chatSelectedAssetId === thread.assetId ? 'var(--color-primary-light)' : 'transparent',
+                      backgroundColor: chatSelectedAssetId === thread.threadId ? 'var(--color-primary-light)' : 'transparent',
                       transition: 'var(--transition-fast)',
                       display: 'flex',
                       gap: '12px',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      position: 'relative'
                     }}
                   >
                     <img 
@@ -937,15 +974,22 @@ export default function PartnerDashboard() {
                     />
                     <div style={{ flexGrow: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <h4 style={{ fontSize: '13px', margin: 0, fontWeight: '700', color: 'var(--color-dark)' }}>{thread.renterName}</h4>
+                        <h4 style={{ fontSize: '13px', margin: 0, fontWeight: '700', color: 'var(--color-dark)' }} className="truncate">{thread.renterName}</h4>
                         <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{thread.timestamp}</span>
                       </div>
-                      <p style={{ fontSize: '12px', color: 'var(--color-text-main)', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        "{thread.lastMessage}"
-                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p style={{ fontSize: '12px', color: unseenCount > 0 ? 'var(--color-dark)' : 'var(--color-text-main)', fontStyle: unseenCount > 0 ? 'normal' : 'italic', fontWeight: unseenCount > 0 ? '600' : 'normal', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          "{thread.lastMessage}"
+                        </p>
+                        {unseenCount > 0 && (
+                          <span style={{ backgroundColor: 'var(--color-danger)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>
+                            {unseenCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))
+                )})
               ) : (
                 <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có tin nhắn nào.</div>
               )}
@@ -963,9 +1007,13 @@ export default function PartnerDashboard() {
                   </div>
                 </div>
 
-                <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
-                  {threadMessages.map((msg) => {
+                <div ref={chatContainerRef} style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                  {threadMessages.map((msg, idx) => {
                     const isMe = msg.senderName === (user?.name || 'Partner');
+                    const prevMsg = threadMessages[idx - 1];
+                    const topicChanged = !prevMsg || prevMsg.assetId !== msg.assetId;
+                    const msgAsset = myAssets.find(a => a.id === msg.assetId);
+
                     return (
                       <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                         <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{msg.senderName} • {msg.timestamp}</div>
@@ -978,12 +1026,39 @@ export default function PartnerDashboard() {
                           border: isMe ? 'none' : '1px solid var(--color-border)',
                           boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                         }}>
+                          {topicChanged && msgAsset && (
+                            <div style={{
+                              backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : '#f8fafc',
+                              borderRadius: '8px',
+                              padding: '6px',
+                              marginBottom: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              border: isMe ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--color-border)'
+                            }}>
+                              <img src={msgAsset.imageUrl} alt="asset" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }}/>
+                              <div style={{ fontSize: '11px', fontWeight: '600' }} className="truncate">{msgAsset.title}</div>
+                            </div>
+                          )}
                           {msg.text}
                         </div>
+                        {isMe && (
+                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            {msg.status === 'seen' ? <><CheckCheck size={12} style={{ color: 'var(--color-primary)' }}/> Đã xem</> : <><Check size={12} /> Đã gửi</>}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
+                  <div ref={messagesEndRef} />
                 </div>
+
+                {typingStatus[`${user?.id}_${chatSelectedAssetId}`]?.customer && (
+                  <div style={{ padding: '0 20px', fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic', marginBottom: '8px' }}>
+                    {typingStatus[`${user?.id}_${chatSelectedAssetId}`].customer} đang soạn tin...
+                  </div>
+                )}
 
                 <form onSubmit={handleSendReply} style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '12px', flexShrink: 0 }}>
                   <input 

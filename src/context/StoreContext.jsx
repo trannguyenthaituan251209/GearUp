@@ -84,21 +84,32 @@ const mapMessageFromDB = (m) => ({
   id: m.id,
   assetId: m.asset_id,
   assetTitle: m.asset_title,
+  senderId: m.sender_id,
+  receiverId: m.receiver_id,
+  customerId: m.customer_id,
   senderName: m.sender_name,
   text: m.text,
-  timestamp: m.timestamp,
+  status: m.status || 'sent',
+  timestamp: m.timestamp || (m.created_at ? new Date(m.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''),
   createdAt: m.created_at
 });
 
-const mapMessageToDB = (m) => ({
-  id: m.id,
-  asset_id: m.assetId,
-  asset_title: m.assetTitle,
-  sender_name: m.senderName,
-  text: m.text,
-  timestamp: m.timestamp,
-  created_at: m.createdAt
-});
+const mapMessageToDB = (m) => {
+    const dbMsg = {
+      id: m.id,
+      asset_id: m.assetId,
+      asset_title: m.assetTitle,
+      sender_name: m.senderName,
+      text: m.text,
+      status: m.status || 'sent',
+      timestamp: m.timestamp,
+      created_at: m.createdAt
+    };
+    if (m.senderId) dbMsg.sender_id = m.senderId;
+    if (m.receiverId) dbMsg.receiver_id = m.receiverId;
+    if (m.customerId) dbMsg.customer_id = m.customerId;
+    return dbMsg;
+  };
 
 const mapBlogFromDB = (b) => ({
   id: b.id,
@@ -162,6 +173,8 @@ export const StoreProvider = ({ children }) => {
   const [assets, setAssets] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [typingStatus, setTypingStatus] = React.useState({});
+  const typingChannelRef = React.useRef(null);
   const [currentCheckout, setCurrentCheckout] = useState(null);
   
   // Favorites & Notifications States
@@ -212,6 +225,35 @@ export const StoreProvider = ({ children }) => {
       return { data, error };
     } catch (err) {
       return { error: { message: err.message } };
+    }
+  };
+
+  const markMessagesAsSeen = async (threadPartnerId, isCustomer = false) => {
+    if (!user) return;
+    
+    // Update local state immediately
+    setMessages(prev => prev.map(m => {
+      const isThreadMsg = isCustomer 
+        ? (m.senderId === threadPartnerId && m.customerId === user.id)
+        : (m.customerId === threadPartnerId);
+      if (isThreadMsg && m.status !== 'seen' && m.receiverId === user.id) {
+        return { ...m, status: 'seen' };
+      }
+      return m;
+    }));
+
+    // Update DB
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        if (isCustomer) {
+           await supabase.from('messages').update({ status: 'seen' }).eq('sender_id', threadPartnerId).eq('customer_id', user.id).eq('receiver_id', user.id).eq('status', 'sent');
+        } else {
+           await supabase.from('messages').update({ status: 'seen' }).eq('customer_id', threadPartnerId).eq('receiver_id', user.id).eq('status', 'sent');
+        }
+      } catch (err) {
+        console.warn('[Supabase] Failed to mark messages as seen:', err);
+      }
     }
   };
 
@@ -349,7 +391,7 @@ export const StoreProvider = ({ children }) => {
       const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
       if (isRealSupabase) {
         try {
-          const { data: profilesData } = await supabase.from('profiles').select('id, name, studio_name, avatar_url');
+          const { data: profilesData } = await supabase.from('profiles').select('id, name, studio_name, avatar');
           const profilesMap = {};
           if (profilesData) {
             profilesData.forEach(p => profilesMap[p.id] = p);
@@ -363,7 +405,7 @@ export const StoreProvider = ({ children }) => {
               if (profilesMap[mappedAsset.ownerId]) {
                 const profile = profilesMap[mappedAsset.ownerId];
                 mappedAsset.ownerName = profile.studio_name || profile.name || mappedAsset.ownerName;
-                if (profile.avatar_url) mappedAsset.ownerAvatar = profile.avatar_url;
+                if (profile.avatar) mappedAsset.ownerAvatar = profile.avatar;
               }
               return mappedAsset;
             }).filter(a => a.ownerId && a.ownerId.length === 36);
@@ -438,7 +480,26 @@ export const StoreProvider = ({ children }) => {
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (!isRealSupabase) return;
 
-    const channel = supabase.channel('public:messages')
+    const channel = supabase.channel('public:messages', { config: { broadcast: { self: true, ack: true } } })
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const { threadId, senderName, senderRole, isTyping } = payload.payload || payload;
+        setTypingStatus(prev => {
+          const next = { ...prev };
+          if (!next[threadId]) next[threadId] = {};
+          if (isTyping) {
+            next[threadId] = { ...next[threadId], [senderRole]: senderName || 'Ai đó' };
+          } else {
+            const updatedThread = { ...next[threadId] };
+            delete updatedThread[senderRole];
+            if (Object.keys(updatedThread).length === 0) {
+              delete next[threadId];
+            } else {
+              next[threadId] = updatedThread;
+            }
+          }
+          return next;
+        });
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMsg = payload.new;
         setMessages(prev => {
@@ -446,7 +507,12 @@ export const StoreProvider = ({ children }) => {
           return [...prev, mapMessageFromDB(newMsg)];
         });
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('[Supabase Realtime] messages channel status:', status, err);
+        if (status === 'SUBSCRIBED') {
+          typingChannelRef.current = channel;
+        }
+      });
 
     const bookingsChannel = supabase.channel('public:bookings')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings' }, (payload) => {
@@ -460,13 +526,15 @@ export const StoreProvider = ({ children }) => {
         const updatedBooking = payload.new;
         setBookings(prev => prev.map(b => b.id === updatedBooking.id ? mapBookingFromDB(updatedBooking) : b));
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('[Supabase Realtime] bookings channel status:', status, err);
+      });
 
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(bookingsChannel);
     };
-  }, []);
+  }, [user?.id]);
 
   // Auth Functions
   const signUpUser = async (email, password, name, phone = '', address = '') => {
@@ -883,15 +951,33 @@ export const StoreProvider = ({ children }) => {
     setBookings(prev => prev.map((b) => b.id === bookingId ? { ...b, status } : b));
   };
 
-  const addMessage = async (assetId, assetTitle, senderName, text) => {
+  const sendTypingEvent = (threadId, isTyping, senderRole = 'customer') => {
+    if (typingChannelRef.current) {
+      typingChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { threadId, senderName: senderRole === 'partner' ? (user?.studio_name || user?.name) : user?.name, senderRole, isTyping }
+      });
+    }
+  };
+
+  const addMessage = async (assetId, assetTitle, senderName, text, senderId, receiverId, customerId) => {
+    console.log('[addMessage] CALLED with receiverId:', receiverId, 'assetId:', assetId, 'customerId:', customerId);
+    if (!receiverId) {
+      console.error('[addMessage] ERROR: receiverId is undefined! Message will not reach the partner.');
+    }
     const newMessage = {
-      id: `msg-${Date.now()}`,
-      assetId,
-      assetTitle,
-      senderName: senderName || user?.name,
-      text,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      createdAt: new Date().toISOString()
+        id: `msg-${Date.now()}`,
+        assetId,
+        assetTitle,
+        senderName: senderName || user?.name,
+        text,
+        status: 'sent',
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date().toISOString(),
+        senderId,
+        receiverId,
+        customerId
     };
     
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
@@ -1097,6 +1183,10 @@ export const StoreProvider = ({ children }) => {
         assets,
         bookings,
         messages,
+        addMessage,
+        markMessagesAsSeen,
+        typingStatus,
+        sendTypingEvent,
         user,
         favorites,
         notifications,

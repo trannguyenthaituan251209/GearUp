@@ -1712,13 +1712,13 @@ export default function PlatformDashboard() {
 
             const handleAcceptTicket = () => {
               if (!selectedCskhUserId) return;
-              addMessage(`cskh-${selectedCskhUserId}`, 'Hỗ trợ Khách hàng', 'Hệ thống', `[ASSIGNED] ${user?.name}`);
+              addMessage(`cskh-${selectedCskhUserId}`, 'Hỗ trợ Khách hàng', 'Hệ thống', `[ASSIGNED] ${user?.name}`, user?.id, selectedCskhUserId, selectedCskhUserId);
             };
 
             const handleReply = (e) => {
               e.preventDefault();
               if (!cskhReplyText.trim() || !selectedCskhUserId) return;
-              addMessage(`cskh-${selectedCskhUserId}`, 'Hỗ trợ Khách hàng', 'Admin CSKH', cskhReplyText);
+              addMessage(`cskh-${selectedCskhUserId}`, 'Hỗ trợ Khách hàng', 'Admin CSKH', cskhReplyText, user?.id, selectedCskhUserId, selectedCskhUserId);
               setCskhReplyText('');
             };
 

@@ -218,7 +218,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
     if (!chatMessage.trim()) return;
 
     const senderName = (user && user.id === asset.ownerId) ? asset.ownerName : renterName;
-    addMessage(asset.id, asset.title, senderName, chatMessage);
+    addMessage(asset.id, asset.title, senderName, chatMessage, user?.id, asset.ownerId, user?.id);
     setChatMessage('');
     alert('Đã gửi tin nhắn đến chủ tài sản thành công!');
     setShowChatModal(false);
@@ -577,22 +577,10 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
               }}>
                 {chatHistory.map((m) => {
                   const isOwner = m.senderName === asset.ownerName;
+                  const isMe = m.senderId === user?.id;
                   return (
-                    <div 
-                      key={m.id} 
-                      style={{
-                        alignSelf: isOwner ? 'flex-start' : 'flex-end',
-                        backgroundColor: isOwner ? '#e2e8f0' : 'var(--color-primary-light)',
-                        color: isOwner ? 'var(--color-dark)' : 'var(--color-primary-active)',
-                        padding: '8px 12px',
-                        borderRadius: 'var(--radius-md)',
-                        maxWidth: '80%',
-                        fontSize: '13px'
-                      }}
-                    >
-                      <div style={{ fontSize: '10px', fontWeight: '700', marginBottom: '2px', opacity: 0.7 }}>
-                        {m.senderName} • {m.timestamp}
-                      </div>
+                    <div key={m.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', backgroundColor: isMe ? 'var(--color-primary)' : '#f1f5f9', color: isMe ? 'white' : 'var(--color-text-primary)', padding: '8px 12px', borderRadius: '8px', maxWidth: '80%' }}>
+                      <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '4px' }}>{m.senderName} • {m.timestamp}</div>
                       <div>{m.text}</div>
                     </div>
                   );

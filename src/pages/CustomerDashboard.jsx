@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import { formatPrice } from '../components/AssetCard';
 import { 
@@ -17,7 +17,10 @@ import {
   Sparkles,
   Inbox,
   Star,
-  Phone
+  Phone,
+  ArrowLeft,
+  Check,
+  CheckCheck
 } from 'lucide-react';
 
 const PartnerContactInfo = ({ assetId, isVisible }) => {
@@ -67,7 +70,7 @@ const PartnerContactInfo = ({ assetId, isVisible }) => {
 };
 
 export default function CustomerDashboard() {
-  const { user, bookings, updateBookingStatus, messages, addMessage, assets, submitReview } = useContext(StoreContext);
+  const { user, bookings, updateBookingStatus, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent, assets, submitReview } = useContext(StoreContext);
 
   const [userReviews, setUserReviews] = useState([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -76,6 +79,22 @@ export default function CustomerDashboard() {
   const [equipmentRating, setEquipmentRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const typingTimeoutRef = React.useRef(null);
+  const messagesEndRef = React.useRef(null);
+
+  const handleTyping = (e) => {
+    setReplyText(e.target.value);
+    const threadId = `${selectedAssetId}_${user?.id}`;
+    sendTypingEvent(threadId, true, 'customer');
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingEvent(threadId, false, 'customer');
+    }, 2000);
+  };
+  const chatContainerRef = React.useRef(null);
+
+
 
   useEffect(() => {
     if (user?.id) {
@@ -129,22 +148,32 @@ export default function CustomerDashboard() {
     (user?.id === 'demo-user-id' && b.renterId === 'user-renter-demo')
   );
 
-  // Group unique messages by asset for chat sidebar
+  // Group unique messages by partner for chat sidebar
   const chatThreads = [];
-  const seenAssets = new Set();
+  const seenPartners = new Set();
   
-  // Traverse messages in reverse to find all assets discussed
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (!seenAssets.has(msg.assetId)) {
-      seenAssets.add(msg.assetId);
-      // Find asset info
+  // Traverse messages in reverse to find all partners discussed
+  const myMessages = messages.filter(m => m.customerId === user?.id || m.receiverId === user?.id);
+  for (let i = myMessages.length - 1; i >= 0; i--) {
+    const msg = myMessages[i];
+    const partnerId = msg.senderId === user?.id ? msg.receiverId : msg.senderId;
+    if (partnerId && !seenPartners.has(partnerId)) {
+      seenPartners.add(partnerId);
+      // Find partner info
+      let partnerName = 'Đối tác GearUp';
+      if (msg.senderId === partnerId && msg.senderName) {
+         partnerName = msg.senderName;
+      } else {
+         const asset = assets.find(a => a.id === msg.assetId);
+         if (asset && asset.ownerName) partnerName = asset.ownerName;
+      }
       const asset = assets.find(a => a.id === msg.assetId);
       chatThreads.push({
+        threadId: partnerId,
         assetId: msg.assetId,
         assetTitle: msg.assetTitle,
         assetImage: asset?.imageUrl || '/camera.png',
-        ownerName: asset?.ownerName || 'Đối tác GearUp',
+        ownerName: partnerName,
         lastMessage: msg.text,
         timestamp: msg.timestamp
       });
@@ -154,21 +183,45 @@ export default function CustomerDashboard() {
   // Set default selected chat if not set
   useEffect(() => {
     if (chatThreads.length > 0 && !selectedAssetId) {
-      setSelectedAssetId(chatThreads[0].assetId);
+      setSelectedAssetId(chatThreads[0].threadId);
     }
   }, [chatThreads, selectedAssetId]);
 
   // Filter messages for current thread
-  const threadMessages = messages.filter(m => m.assetId === selectedAssetId);
-  let selectedThread = chatThreads.find(t => t.assetId === selectedAssetId);
+  const threadMessages = messages.filter(m => (m.customerId === user?.id || m.receiverId === user?.id) && (m.senderId === selectedAssetId || m.receiverId === selectedAssetId));
+
+  useEffect(() => {
+    if (selectedAssetId && activeTab === 'chat') {
+      const hasUnseen = threadMessages.some(m => m.receiverId === user?.id && m.status === 'sent');
+      if (hasUnseen) {
+        markMessagesAsSeen(selectedAssetId, true);
+      }
+    }
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  }, [selectedAssetId, activeTab, threadMessages.length, markMessagesAsSeen, user?.id]);
+
+  const filteredBookings = useMemo(() => {
+    return myBookings.filter(b => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'approved' && b.status === 'paid') return true;
+      return b.status === statusFilter;
+    });
+  }, [myBookings, statusFilter]);
+  
+  let selectedThread = chatThreads.find(t => t.threadId === selectedAssetId);
   if (!selectedThread && selectedAssetId) {
-    const asset = assets.find(a => a.id === selectedAssetId);
-    if (asset) {
+    const partnerAsset = assets.find(a => a.ownerId === selectedAssetId);
+    if (partnerAsset) {
       selectedThread = {
-        assetId: asset.id,
-        assetTitle: asset.title,
-        assetImage: asset.imageUrl || '/camera.png',
-        ownerName: asset.ownerName || 'Đối tác GearUp',
+        threadId: selectedAssetId,
+        assetId: partnerAsset.id,
+        assetTitle: partnerAsset.title,
+        assetImage: partnerAsset.imageUrl || '/camera.png',
+        ownerName: partnerAsset.ownerName || 'Đối tác GearUp',
         lastMessage: '',
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
@@ -196,19 +249,17 @@ export default function CustomerDashboard() {
     if (!replyText.trim() || !selectedAssetId) return;
     
     let finalMessage = replyText.trim();
-    // Tự động đính kèm mã đơn nếu có
-    const relatedBooking = myBookings.find(b => b.assetId === selectedAssetId);
-    if (relatedBooking && !finalMessage.includes('[Đơn #')) {
-      const orderCode = relatedBooking.id.split('-')[1] || relatedBooking.id;
-      finalMessage = `[Đơn #${orderCode}] ${finalMessage}`;
-    }
-
+    const receiverId = selectedAssetId.startsWith('cskh-') ? 'admin' : selectedAssetId;
+    
     // Add message
     addMessage(
-      selectedAssetId,
+      selectedThread?.assetId,
       selectedThread?.assetTitle || 'Thiết bị',
       user?.name || 'Khách hàng',
-      finalMessage
+      finalMessage,
+      user?.id,
+      receiverId,
+      user?.id
     );
     setReplyText('');
   };
@@ -218,13 +269,6 @@ export default function CustomerDashboard() {
   const rentingCount = myBookings.filter(b => b.status === 'approved' || b.status === 'paid').length;
   const returnedCount = myBookings.filter(b => b.status === 'returned').length;
   const cancelledCount = myBookings.filter(b => b.status === 'cancelled').length;
-
-  // Filtered bookings based on sub-tab status
-  const filteredBookings = myBookings.filter(b => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'approved' && b.status === 'paid') return true;
-    return b.status === statusFilter;
-  });
 
   return (
     <div className="container" style={{ paddingTop: '40px' }}>
@@ -491,8 +535,10 @@ export default function CustomerDashboard() {
                           className="btn btn-outline btn-sm"
                           style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => {
-                            setSelectedAssetId(booking.assetId);
+                            const ownerId = assets.find(a => a.id === booking.assetId)?.ownerId;
+                            if (ownerId) setSelectedAssetId(ownerId);
                             setActiveTab('chat');
+                            setShowMobileSidebar(false);
                           }}
                         >
                           <MessageSquare size={13} />
@@ -517,7 +563,7 @@ export default function CustomerDashboard() {
 
         {/* CHAT TAB */}
         {activeTab === 'chat' && (
-          <div className="glass-panel" style={{ 
+          <div className={`glass-panel chat-layout ${showMobileSidebar ? 'show-sidebar' : ''}`} style={{ 
             display: 'grid', 
             gridTemplateColumns: '1fr 2fr', 
             height: '600px', 
@@ -525,10 +571,10 @@ export default function CustomerDashboard() {
             borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
             border: '1px solid var(--color-border)'
-          }} className="chat-layout">
+          }}>
             
             {/* Left sidebar: Thread list */}
-            <aside style={{ borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <aside className="chat-sidebar" style={{ borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
                 <h3 style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MessageSquare size={18} style={{ color: 'var(--color-primary)' }} />
@@ -538,42 +584,49 @@ export default function CustomerDashboard() {
               
               <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {chatThreads.length > 0 ? (
-                  chatThreads.map((thread) => (
-                    <div 
-                      key={thread.assetId}
-                      onClick={() => setSelectedAssetId(thread.assetId)}
-                      style={{
-                        padding: '16px',
-                        borderBottom: '1px solid var(--color-border)',
-                        cursor: 'pointer',
-                        backgroundColor: selectedAssetId === thread.assetId ? 'var(--color-primary-light)' : 'transparent',
-                        transition: 'var(--transition-fast)',
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <img 
-                        src={thread.assetImage} 
-                        alt={thread.assetTitle} 
-                        style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--color-border)' }} 
-                      />
-                      <div style={{ flexGrow: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
-                          <h4 style={{ fontSize: '13px', margin: 0, fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--color-dark)' }}>
-                            {thread.ownerName}
-                          </h4>
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{thread.timestamp}</span>
+                  chatThreads.map((thread) => {
+                    const unseenCount = messages.filter(m => (m.senderId === thread.threadId || m.receiverId === thread.threadId) && m.receiverId === user?.id && m.status === 'sent').length;
+                    return (
+                      <div 
+                        key={thread.threadId}
+                        onClick={() => {
+                          setSelectedAssetId(thread.threadId);
+                          setShowMobileSidebar(false);
+                        }}
+                        style={{
+                          padding: '16px',
+                          borderBottom: '1px solid var(--color-border)',
+                          cursor: 'pointer',
+                          backgroundColor: selectedAssetId === thread.threadId ? 'var(--color-primary-light)' : 'transparent',
+                          transition: 'var(--transition-fast)',
+                          display: 'flex',
+                          gap: '12px',
+                          position: 'relative'
+                        }}
+                      >
+                        <img src={thread.assetImage} alt="asset" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '600', fontSize: '13px', color: 'var(--color-dark)' }} className="truncate">{thread.ownerName}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0 }}>{thread.timestamp}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-primary)' }} className="truncate">
+                            {thread.assetTitle}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '12px', color: unseenCount > 0 ? 'var(--color-dark)' : 'var(--color-text-muted)', fontStyle: unseenCount > 0 ? 'normal' : 'italic', fontWeight: unseenCount > 0 ? '600' : 'normal' }} className="truncate">
+                              "{thread.lastMessage}"
+                            </div>
+                            {unseenCount > 0 && (
+                              <span style={{ backgroundColor: 'var(--color-danger)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>
+                                {unseenCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {thread.assetTitle}
-                        </p>
-                        <p style={{ fontSize: '12px', color: 'var(--color-text-main)', margin: '4px 0 0 0', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          "{thread.lastMessage}"
-                        </p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                     Chưa có cuộc trò chuyện nào.
@@ -583,7 +636,7 @@ export default function CustomerDashboard() {
             </aside>
 
             {/* Right container: Message list & Text input */}
-            <section style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+            <section className="chat-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
               {selectedAssetId && selectedThread ? (
                 <>
                   {/* Top Bar info */}
@@ -596,6 +649,9 @@ export default function CustomerDashboard() {
                     alignItems: 'center'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button className="btn btn-ghost btn-sm mobile-back-btn" onClick={() => setShowMobileSidebar(true)} style={{ padding: '4px', marginRight: '4px', display: 'none' }}>
+                        <ArrowLeft size={20} />
+                      </button>
                       <img src={selectedThread.assetImage} alt={selectedThread.assetTitle} style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
                       <div>
                         <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>{selectedThread.ownerName}</h3>
@@ -607,41 +663,62 @@ export default function CustomerDashboard() {
                   </div>
 
                   {/* Messages list */}
-                  <div style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
-                    {threadMessages.map((msg) => {
-                      const isMe = msg.senderName === (user?.name || 'Khách hàng');
+                  <div ref={chatContainerRef} style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+                    {threadMessages.map((msg, idx) => {
+                      const isMe = msg.senderId === user?.id;
+                      const prevMsg = threadMessages[idx - 1];
+                      const topicChanged = !prevMsg || prevMsg.assetId !== msg.assetId;
+                      const msgAsset = assets.find(a => a.id === msg.assetId);
+
                       return (
-                        <div 
-                          key={msg.id}
-                          style={{
-                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                            maxWidth: '70%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: isMe ? 'flex-end' : 'flex-start'
-                          }}
-                        >
-                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px', paddingLeft: '4px' }}>
-                            {msg.senderName} • {msg.timestamp}
-                          </div>
-                          <div style={{
-                            padding: '12px 16px',
-                            borderRadius: isMe ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
-                            backgroundColor: isMe ? 'var(--color-primary)' : '#ffffff',
-                            color: isMe ? '#ffffff' : 'var(--color-text-main)',
-                            fontSize: '14px',
-                            border: isMe ? 'none' : '1px solid var(--color-border)',
+                        <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{msg.senderName} • {msg.timestamp}</div>
+                          <div style={{ 
+                            backgroundColor: isMe ? 'var(--color-primary)' : '#f1f5f9', 
+                            color: isMe ? '#ffffff' : 'var(--color-text-primary)', 
+                            padding: '10px 14px', 
+                            borderRadius: '16px', 
+                            borderBottomRightRadius: isMe ? '4px' : '16px',
+                            borderBottomLeftRadius: !isMe ? '4px' : '16px',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            wordBreak: 'break-word'
+                            wordBreak: 'break-word',
+                            fontSize: '13px'
                           }}>
+                            {topicChanged && msgAsset && (
+                              <div style={{
+                                backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : '#ffffff',
+                                borderRadius: '8px',
+                                padding: '6px',
+                                marginBottom: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                border: isMe ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--color-border)'
+                              }}>
+                                <img src={msgAsset.imageUrl} alt="asset" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }}/>
+                                <div style={{ fontSize: '11px', fontWeight: '600' }} className="truncate">{msgAsset.title}</div>
+                              </div>
+                            )}
                             {msg.text}
                           </div>
+                          {isMe && (
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                              {msg.status === 'seen' ? <><CheckCheck size={12} style={{ color: 'var(--color-primary)' }}/> Đã xem</> : <><Check size={12} /> Đã gửi</>}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-                  </div>
-
-                  {/* Text Input reply form */}
+                    <div ref={messagesEndRef} />
+                    </div>
+                    
+                    {typingStatus[`${selectedAssetId}_${user?.id}`]?.partner && (
+                      <div style={{ padding: '0 20px', fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic', marginBottom: '8px' }}>
+                        {typingStatus[`${selectedAssetId}_${user?.id}`].partner} đang soạn tin...
+                      </div>
+                    )}
+                    
+                    {/* Text Input reply form */}
                   <form onSubmit={handleSendReply} style={{ 
                     padding: '16px 20px', 
                     backgroundColor: '#ffffff', 
@@ -656,7 +733,7 @@ export default function CustomerDashboard() {
                       className="form-control"
                       placeholder="Nhập tin nhắn để thảo luận với đối tác..."
                       value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
+                      onChange={handleTyping}
                       style={{ flexGrow: 1, borderRadius: '99px' }}
                       required
                     />
@@ -690,17 +767,6 @@ export default function CustomerDashboard() {
         )}
 
       </main>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .chat-layout {
-            grid-template-columns: 1fr !important;
-          }
-          .chat-layout aside {
-            max-height: 200px;
-          }
-        }
-      `}</style>
       {/* Review Modal */}
       {reviewModalOpen && reviewBooking && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
