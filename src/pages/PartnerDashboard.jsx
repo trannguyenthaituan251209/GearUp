@@ -34,7 +34,7 @@ import AssetEditModal from '../components/AssetEditModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
-  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, addAsset, updateAssetDetails, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent } = useContext(StoreContext);
+  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, deleteAsset, addAsset, updateAssetDetails, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent } = useContext(StoreContext);
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -427,6 +427,26 @@ export default function PartnerDashboard() {
                   >
                     <Edit3 size={14} /> Sửa
                   </button>
+                  {asset.pricePerDay < 0 && (
+                    <button 
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                      onClick={() => {
+                        const hasActive = bookings.some(b => b.assetId === asset.id && ['pending', 'approved', 'paid', 'renting'].includes(b.status));
+                        if (hasActive) {
+                          alert("Không thể xóa thiết bị đang có đơn thuê chưa hoàn tất!");
+                          return;
+                        }
+                        if (window.confirm('Bạn có chắc chắn muốn xóa thiết bị này không? Hành động này không thể hoàn tác!')) {
+                          deleteAsset(asset.id);
+                          alert('Xóa thiết bị thành công!');
+                        }
+                      }}
+                      title="Xóa thiết bị (Chỉ dành cho sản phẩm test lỗi giá âm)"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

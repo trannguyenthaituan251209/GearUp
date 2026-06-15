@@ -899,6 +899,18 @@ export const StoreProvider = ({ children }) => {
     setAssets(prev => prev.map((a) => a.id === assetId ? { ...a, status } : a));
   };
 
+  const deleteAsset = async (assetId) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        await supabase.from('assets').delete().eq('id', assetId);
+      } catch (err) {
+        console.warn('[Supabase] Failed to delete asset:', err);
+      }
+    }
+    setAssets(prev => prev.filter(a => a.id !== assetId));
+  };
+
   const updateAssetDetails = async (assetId, updatedData) => {
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
@@ -1215,6 +1227,7 @@ export const StoreProvider = ({ children }) => {
         rejectPartner,
         addAsset,
         updateAssetStatus,
+        deleteAsset,
         addBooking,
         updateBookingStatus,
         addMessage,
