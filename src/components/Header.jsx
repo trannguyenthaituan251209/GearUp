@@ -22,7 +22,7 @@ export default function Header({ currentPage, setCurrentPage }) {
     logoutUser
   } = useContext(StoreContext);
 
-  const unreadNotifs = notifications.filter(n => !n.isRead).length;
+  const unreadNotifs = notifications.filter(n => (!n.type || !n.type.startsWith('partner_')) && !n.isRead).length;
 
   const uniqueTitles = Array.from(new Set((assets || []).map(a => a.title)));
   const searchSuggestions = uniqueTitles.filter(title => {
@@ -346,25 +346,28 @@ export default function Header({ currentPage, setCurrentPage }) {
                   Thông báo {unreadNotifs > 0 && <span style={{ backgroundColor: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '10px' }}>{unreadNotifs} mới</span>}
                 </div>
                 <div className="no-scrollbar" style={{ overflowY: 'auto', flex: 1 }}>
-                  {notifications.length === 0 ? (
+                  {notifications.filter(n => !n.type || !n.type.startsWith('partner_')).length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Không có thông báo nào.</div>
                   ) : (
-                    notifications.map(notif => (
-                      <div 
-                        key={notif.id} 
-                        onClick={() => { if (!notif.isRead) markNotificationAsRead(notif.id); }}
-                        style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: notif.isRead ? '#ffffff' : '#f0f9ff', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '4px' }}
-                        onMouseOver={(e) => { if (notif.isRead) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-                        onMouseOut={(e) => { if (notif.isRead) e.currentTarget.style.backgroundColor = '#ffffff'; }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: '13px', fontWeight: notif.isRead ? '500' : '600', color: 'var(--color-dark)' }}>{notif.title}</span>
-                          {!notif.isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6', marginTop: '4px', flexShrink: 0 }}></span>}
+                    notifications.filter(n => !n.type || !n.type.startsWith('partner_')).map(notif => {
+                      const isCancelled = notif.title.toLowerCase().includes('hủy') || notif.type === 'customer_alert' || notif.type === 'alert';
+                      return (
+                        <div 
+                          key={notif.id} 
+                          onClick={() => { if (!notif.isRead) markNotificationAsRead(notif.id); }}
+                          style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', backgroundColor: isCancelled ? '#fee2e2' : (notif.isRead ? '#ffffff' : '#f0f9ff'), transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '4px' }}
+                          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = isCancelled ? '#fecaca' : (notif.isRead ? '#f8fafc' : '#e0f2fe'); }}
+                          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = isCancelled ? '#fee2e2' : (notif.isRead ? '#ffffff' : '#f0f9ff'); }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <span style={{ fontSize: '13px', fontWeight: notif.isRead ? '500' : '600', color: isCancelled ? '#ef4444' : 'var(--color-dark)' }}>{notif.title}</span>
+                            {!notif.isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isCancelled ? '#ef4444' : '#3b82f6', marginTop: '4px', flexShrink: 0 }}></span>}
+                          </div>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-main)', lineHeight: '1.4' }}>{notif.message}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</span>
                         </div>
-                        <span style={{ fontSize: '12px', color: 'var(--color-text-main)', lineHeight: '1.4' }}>{notif.message}</span>
-                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{new Date(notif.createdAt).toLocaleDateString('vi-VN')}</span>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

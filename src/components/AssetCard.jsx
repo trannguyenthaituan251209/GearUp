@@ -5,7 +5,8 @@ import { StoreContext } from '../context/StoreContext';
 // Format price in VND (e.g. 450000 -> 450.000)
 export function formatPrice(price) {
   if (price === undefined || price === null) return '0';
-  return price.toLocaleString('vi-VN');
+  const roundedPrice = Math.round(Number(price) / 1000) * 1000;
+  return roundedPrice.toLocaleString('vi-VN');
 }
 
 export default function AssetCard({ asset, onSelect }) {

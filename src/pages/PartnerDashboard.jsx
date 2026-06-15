@@ -28,7 +28,8 @@ import {
   User,
   Trash2,
   CheckCircle2,
-  CheckCheck
+  CheckCheck,
+  Menu
 } from 'lucide-react';
 import AssetEditModal from '../components/AssetEditModal';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
@@ -40,6 +41,22 @@ export default function PartnerDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [chatSelectedAssetId, setChatSelectedAssetId] = useState(null);
   const [chatReplyText, setChatReplyText] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    // Initial check
+    if (window.innerWidth <= 1024) {
+      setIsSidebarOpen(false);
+    }
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [sessionViewedBookings] = useState(() => {
     try {
@@ -174,7 +191,7 @@ export default function PartnerDashboard() {
       <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Tổng quan hoạt động</h2>
       
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+      <div className="overview-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         <div style={{ ...glassCardStyle, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>Doanh Thu (Net)</span>
@@ -204,7 +221,7 @@ export default function PartnerDashboard() {
       </div>
 
       {/* Charts & Upcoming Bookings */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+      <div className="overview-charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
         <div style={glassCardStyle}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Tăng trưởng doanh thu</h3>
           <div style={{ height: '300px', width: '100%' }}>
@@ -380,7 +397,7 @@ export default function PartnerDashboard() {
         </select>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+      <div className="listings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
         {filteredAndSortedAssets.length === 0 ? (
           <div style={{ ...glassCardStyle, gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
             <Camera size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
@@ -471,68 +488,90 @@ export default function PartnerDashboard() {
   const renderOrders = () => {
     const rentingBookings = filteredAndSortedBookings.filter(b => (b.status === 'approved' || b.status === 'paid') && new Date(b.startDate) <= new Date());
     const upcomingBookings = filteredAndSortedBookings.filter(b => b.status === 'pending' || ((b.status === 'approved' || b.status === 'paid') && new Date(b.startDate) > new Date()));
-    const historyBookings = filteredAndSortedBookings.filter(b => ['returned', 'rejected', 'cancelled'].includes(b.status));
+    const completedBookings = filteredAndSortedBookings.filter(b => b.status === 'returned');
+    const cancelledBookings = filteredAndSortedBookings.filter(b => ['rejected', 'cancelled'].includes(b.status));
 
-    const renderBookingList = (list, title) => (
-      <div style={{ ...glassCardStyle, marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--color-dark)' }}>{title} ({list.length})</h3>
+    const renderIsland = (list, title, color) => (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: 'calc(50vh - 120px)',
+        overflowY: 'auto',
+        paddingRight: '6px' // for scrollbar
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, paddingBottom: '8px', borderBottom: `2px solid ${color}` }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '800', color: color, margin: 0, textTransform: 'uppercase' }}>{title}</h3>
+          <span style={{ backgroundColor: color, color: '#ffffff', fontSize: '12px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px' }}>{list.length}</span>
+        </div>
         {list.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Chưa có đơn hàng nào.</div>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Trống</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {list.map(b => {
               const isNewPaid = b.status === 'paid' && !sessionViewedBookings.includes(b.id);
               const isRenting = new Date(b.startDate) <= new Date();
               return (
-                <div key={b.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '8px', backgroundColor: '#f8fafc', gap: '16px' }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Mã Đơn: #{b.id.split('-')[1]}</div>
-                    <div style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div key={b.id} 
+                  title={`Thiết bị: ${b.assetTitle}\nKhách: ${b.renterName} (${b.renterContact})\nThời gian: ${new Date(b.startDate).toLocaleDateString('vi-VN')} đến ${new Date(b.endDate).toLocaleDateString('vi-VN')}\nTổng tiền: ${formatPrice(b.totalPrice)} đ\nMã đơn: #${String(b.id).includes('-') ? String(b.id).split('-')[1] : b.id}`}
+                  style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row', 
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px', 
+                  border: '1px solid var(--color-border)', 
+                  borderRadius: '6px', 
+                  backgroundColor: '#ffffff', 
+                  gap: '8px', 
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  flexWrap: 'wrap',
+                  cursor: 'default'
+                }}>
+                  {/* Left info area */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '0' }}>
+                    {isNewPaid && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-warning)', flexShrink: 0 }}></div>}
+                    
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
                       {b.assetTitle}
                     </div>
-                  </div>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      Khách: {b.renterName}
-                      {isNewPaid && <span style={{ backgroundColor: 'var(--color-warning)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>MỚI</span>}
+                    
+                    <div style={{ color: 'var(--color-border)', fontSize: '12px' }}>|</div>
+                    
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90px' }}>
+                      {b.renterName}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{b.renterContact}</div>
+                    
+                    <div style={{ color: 'var(--color-border)', fontSize: '12px' }}>|</div>
+                    
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {new Date(b.startDate).toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit'})} - {new Date(b.endDate).toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit'})}
+                    </div>
                   </div>
-                  <div style={{ flex: '1 1 150px' }}>
-                    <div style={{ fontSize: '13px' }}>Từ: {new Date(b.startDate).toLocaleDateString('vi-VN')}</div>
-                    <div style={{ fontSize: '13px' }}>Đến: {new Date(b.endDate).toLocaleDateString('vi-VN')}</div>
-                  </div>
-                  <div style={{ flex: '1 1 100px', textAlign: 'right' }}>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--color-primary)' }}>{formatPrice(b.totalPrice)} đ</div>
-                    <span className={`badge badge-${b.status === 'paid' ? 'approved' : b.status}`} style={{ fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
-                      {b.status === 'pending' && 'Chờ Duyệt'}
-                      {(b.status === 'approved' || b.status === 'paid') && (isRenting ? 'Đang Thuê' : 'Đã Thanh Toán')}
-                      {b.status === 'returned' && 'Hoàn Tất'}
-                      {b.status === 'rejected' && 'Đã Hủy'}
-                      {b.status === 'cancelled' && 'Đã Hủy'}
-                    </span>
-                  </div>
-                  <div style={{ flex: '0 0 auto', display: 'flex', gap: '8px' }}>
+
+                  {/* Right action area */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '0 0 auto' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-primary)', marginRight: '4px' }}>
+                      {formatPrice(b.totalPrice)}đ
+                    </div>
+
                     {b.status === 'pending' && (
                       <>
-                        <button title="Duyệt đơn" className="btn btn-primary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'approved')}><Check size={16}/></button>
-                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '8px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={16}/></button>
+                        <button title="Duyệt đơn" className="btn btn-primary btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => updateBookingStatus(b.id, 'approved')}><Check size={14}/></button>
+                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={14}/></button>
                       </>
                     )}
                     {(b.status === 'approved' || b.status === 'paid') && (
                       <>
-                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '8px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><Trash2 size={16}/></button>
-                        {isRenting ? (
-                          <button title="Kết thúc đơn (Hoàn tất)" className="btn btn-primary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'returned')}><CheckCircle2 size={16}/></button>
-                        ) : (
-                          <button title="Nhận lại máy" className="btn btn-secondary btn-sm" style={{ padding: '8px' }} onClick={() => updateBookingStatus(b.id, 'returned')}><RotateCcw size={16}/></button>
+                        <button title="Hủy đơn" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => updateBookingStatus(b.id, 'rejected')}><X size={14}/></button>
+                        {isRenting && (
+                          <button title="Kết thúc đơn" className="btn btn-primary btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => updateBookingStatus(b.id, 'returned')}><CheckCircle2 size={14}/></button>
                         )}
                       </>
                     )}
-                    <button title="Nhắn tin cho khách" className="btn btn-outline btn-sm" style={{ padding: '8px' }} onClick={() => {
+                    <button title="Nhắn tin cho khách" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => {
                         setChatSelectedAssetId(b.renterId);
                         setActiveTab('chat');
-                      }}><MessageSquare size={16}/></button>
+                      }}><MessageSquare size={14}/></button>
                   </div>
                 </div>
               );
@@ -576,9 +615,17 @@ export default function PartnerDashboard() {
           </select>
         </div>
 
-        {renderBookingList(rentingBookings, "Đơn đang cho thuê")}
-        {renderBookingList(upcomingBookings, "Đơn sắp tới & Chờ duyệt")}
-        {renderBookingList(historyBookings, "Lịch sử đơn hàng")}
+        <div className="orders-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '20px',
+          alignItems: 'start'
+        }}>
+          {renderIsland(rentingBookings, "Đang thuê", "#3b82f6")}
+          {renderIsland(upcomingBookings, "Sắp tới", "#eab308")}
+          {renderIsland(completedBookings, "Hoàn thành", "#22c55e")}
+          {renderIsland(cancelledBookings, "Đã hủy", "#ef4444")}
+        </div>
 
       </div>
     );
@@ -966,7 +1013,7 @@ export default function PartnerDashboard() {
       <div className="animate-fade-in" style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Tin Nhắn & Hỗ Trợ</h2>
         
-        <div style={{ ...glassCardStyle, padding: 0, display: 'grid', gridTemplateColumns: '1fr 2fr', flexGrow: 1, overflow: 'hidden' }} className="chat-layout">
+        <div style={{ ...glassCardStyle, padding: 0, display: 'grid', gridTemplateColumns: '280px 1fr', flexGrow: 1, overflow: 'hidden' }} className="chat-layout">
           
           <aside style={{ borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#f8fafc' }}>
@@ -1025,10 +1072,17 @@ export default function PartnerDashboard() {
             </div>
           </aside>
 
-          <section style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+          <section className="chat-section" style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
             {chatSelectedAssetId && selectedThread ? (
               <>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    className="mobile-back-btn" 
+                    onClick={() => setChatSelectedAssetId(null)} 
+                    style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-dark)' }}
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
                   <img src={selectedThread.assetImage} alt="asset" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
                   <div>
                     <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>{selectedThread.renterName}</h3>
@@ -1038,7 +1092,7 @@ export default function PartnerDashboard() {
 
                 <div ref={chatContainerRef} style={{ flexGrow: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
                   {threadMessages.map((msg, idx) => {
-                    const isMe = msg.senderName === (user?.name || 'Partner');
+                    const isMe = msg.senderId === user?.id;
                     const prevMsg = threadMessages[idx - 1];
                     const topicChanged = !prevMsg || prevMsg.assetId !== msg.assetId;
                     const msgAsset = myAssets.find(a => a.id === msg.assetId);
@@ -1090,13 +1144,35 @@ export default function PartnerDashboard() {
                 )}
 
                 <form onSubmit={handleSendReply} style={{ padding: '16px 20px', backgroundColor: '#ffffff', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '12px', flexShrink: 0 }}>
-                  <input 
-                    type="text"
-                    className="form-control"
-                    placeholder="Nhập phản hồi..."
+                  <textarea 
+                    className="form-control hide-scrollbar"
+                    placeholder="Nhập tin nhắn..."
                     value={chatReplyText}
-                    onChange={handleTyping}
-                    style={{ flexGrow: 1, borderRadius: '99px' }}
+                    onChange={(e) => {
+                      handleTyping(e);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (chatReplyText.trim()) handleSendReply(e);
+                        // Reset height
+                        e.target.style.height = 'auto';
+                      }
+                    }}
+                    style={{ 
+                      flexGrow: 1, 
+                      borderRadius: '20px', 
+                      minHeight: '40px',
+                      maxHeight: '120px',
+                      padding: '10px 16px',
+                      resize: 'none',
+                      fontFamily: 'inherit',
+                      lineHeight: '1.4',
+                      overflowY: 'auto'
+                    }}
+                    rows={1}
                     required
                   />
                   <button type="submit" className="btn btn-primary" style={{ borderRadius: '50%', width: '40px', height: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1121,14 +1197,15 @@ export default function PartnerDashboard() {
     <div style={{ display: 'flex', minHeight: 'calc(100vh - 70px)', backgroundColor: '#f8fafc' }}>
       
       {/* Sidebar */}
-      <aside style={{ 
+      <aside className={`sidebar-container ${!isSidebarOpen ? 'sidebar-closed' : ''}`} style={{ 
         width: isSidebarOpen ? '260px' : '80px', 
         backgroundColor: '#ffffff', 
         borderRight: '1px solid var(--color-border)',
-        transition: 'width 0.3s ease',
+        transition: 'all 0.3s ease',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative'
+        position: 'relative',
+        zIndex: 50
       }}>
         {/* Toggle Button */}
         <button 
@@ -1170,8 +1247,7 @@ export default function PartnerDashboard() {
             { id: 'listings', icon: Package, label: 'Thiết Bị Của Tôi' },
             { id: 'orders', icon: ShoppingCart, label: 'Đơn Hàng' },
             { id: 'chat', icon: MessageSquare, label: 'Tin Nhắn' },
-            { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' },
-            { id: 'add-new', icon: PlusCircle, label: 'Đăng Thiết Bị' },
+            { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' }
           ].map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -1204,7 +1280,7 @@ export default function PartnerDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', overflowX: 'hidden' }}>
+      <main className="main-content" style={{ flex: 1, padding: '32px', overflowY: 'auto', overflowX: 'hidden' }}>
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'listings' && renderListings()}
         {activeTab === 'orders' && renderOrders()}
@@ -1214,15 +1290,83 @@ export default function PartnerDashboard() {
       </main>
 
       <style>{`
-        @media (max-width: 768px) {
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .listings-grid, .orders-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+        @media (max-width: 1024px) {
+          .main-content {
+            padding: 12px !important;
+          }
           .chat-layout {
             grid-template-columns: 1fr !important;
+            height: calc(100vh - 120px) !important;
+            border: none !important;
           }
           .chat-layout aside {
-            max-height: 200px;
+            max-height: none !important;
+            display: ${chatSelectedAssetId ? 'none' : 'block'} !important;
+          }
+          .chat-section {
+            display: ${!chatSelectedAssetId ? 'none' : 'flex'} !important;
+          }
+          .sidebar-container {
+            position: absolute !important;
+            height: 100%;
+          }
+          .sidebar-closed {
+            transform: translateX(-100%);
+            width: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+          }
+          .overview-metric-grid, .overview-charts-grid, .orders-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .listings-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+        @media (min-width: 1025px) {
+          .mobile-menu-btn, .mobile-back-btn {
+            display: none !important;
           }
         }
       `}</style>
+
+      {/* Floating Mobile Menu Button */}
+      {!isSidebarOpen && (
+        <button 
+          className="mobile-menu-btn"
+          onClick={() => setIsSidebarOpen(true)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-primary)',
+            color: '#fff',
+            border: 'none',
+            boxShadow: '0 4px 15px rgba(255, 120, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999,
+            cursor: 'pointer'
+          }}
+        >
+          <Menu size={28} />
+        </button>
+      )}
     </div>
   );
 }

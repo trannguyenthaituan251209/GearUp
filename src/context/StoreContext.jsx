@@ -442,7 +442,7 @@ export const StoreProvider = ({ children }) => {
           if (!favErr && favData) {
             const fetchedFavs = favData.map(f => f.asset_id);
             setFavorites(fetchedFavs);
-            localStorage.setItem('gearup_favorites', JSON.stringify(fetchedFavs));
+           localStorage.setItem('gearup_favorites', JSON.stringify(fetchedFavs));
           }
         } catch (err) { console.warn('Fav fetch error', err); }
         
@@ -450,7 +450,7 @@ export const StoreProvider = ({ children }) => {
         try {
           const { data: notifData, error: notifErr } = await supabase.from('notifications')
             .select('*')
-            .in('user_id', [user.email, 'all'])
+            .in('user_id', [user.email, user.id, 'all'])
             .order('created_at', { ascending: false });
           if (!notifErr && notifData) {
             setNotifications(notifData.map(n => ({
@@ -534,9 +534,32 @@ export const StoreProvider = ({ children }) => {
         console.log('[Supabase Realtime] bookings channel status:', status, err);
       });
 
+    const notifChannel = supabase.channel('public:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        const newNotif = payload.new;
+        if (newNotif.user_id === user?.id || newNotif.user_id === user?.email || newNotif.user_id === 'all') {
+          setNotifications(prev => {
+            if (prev.some(n => n.id === newNotif.id)) return prev;
+            return [{
+              id: newNotif.id,
+              userId: newNotif.user_id,
+              title: newNotif.title,
+              message: newNotif.message,
+              type: newNotif.type,
+              isRead: newNotif.is_read,
+              createdAt: newNotif.created_at
+            }, ...prev];
+          });
+        }
+      })
+      .subscribe((status, err) => {
+        console.log('[Supabase Realtime] notifications channel status:', status, err);
+      });
+
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(bookingsChannel);
+      supabase.removeChannel(notifChannel);
     };
   }, [user?.id]);
 
@@ -911,6 +934,41 @@ export const StoreProvider = ({ children }) => {
     setAssets(prev => prev.filter(a => a.id !== assetId));
   };
 
+  const addNotification = async (userId, title, message, type = 'system') => {
+    const newNotif = {
+      id: `notif-${Date.now()}`,
+      user_id: userId,
+      title,
+      message,
+      type,
+      is_read: false,
+      created_at: new Date().toISOString()
+    };
+    
+    setNotifications(prev => [{
+      id: newNotif.id,
+      userId: newNotif.user_id,
+      title: newNotif.title,
+      message: newNotif.message,
+      type: newNotif.type,
+      isRead: newNotif.is_read,
+      createdAt: newNotif.created_at
+    }, ...prev]);
+
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
+    if (isRealSupabase) {
+      try {
+        await supabase.from('notifications').insert([{
+          user_id: userId,
+          title,
+          message,
+          type,
+          is_read: false
+        }]);
+      } catch (err) { console.warn('Failed to insert notif', err); }
+    }
+  };
+
   const updateAssetDetails = async (assetId, updatedData) => {
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
@@ -936,6 +994,7 @@ export const StoreProvider = ({ children }) => {
   };
 
   const addBooking = async (newBooking) => {
+    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     const bookingRecord = {
       id: `booking-${Date.now()}`,
       status: newBooking.status || 'pending',
@@ -944,18 +1003,24 @@ export const StoreProvider = ({ children }) => {
       ...newBooking
     };
     
-    const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
       try {
-        await supabase.from('bookings').insert([mapBookingToDB(bookingRecord)]);
+        const { data, error } = await supabase.from('bookings').insert([mapBookingToDB(bookingRecord)]).select();
+        if (!error && data && data.length > 0) {
+          Object.assign(bookingRecord, mapBookingFromDB(data[0]));
+        }
       } catch (err) {
-        console.warn('[Supabase] Failed to insert booking:', err);
+        console.warn('[Supabase] Failed to add booking:', err);
       }
     }
     setBookings(prev => [bookingRecord, ...prev]);
+    if (newBooking.ownerId) {
+      addNotification(newBooking.ownerId, "Đơn thuê mới", `Bạn nhận được yêu cầu thuê mới cho thiết bị: ${newBooking.assetTitle}`, "partner_booking");
+    }
   };
 
   const updateBookingStatus = async (bookingId, status) => {
+    const booking = bookings.find(b => b.id === bookingId);
     const isRealSupabase = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('your-supabase-url');
     if (isRealSupabase) {
       try {
@@ -965,6 +1030,18 @@ export const StoreProvider = ({ children }) => {
       }
     }
     setBookings(prev => prev.map((b) => b.id === bookingId ? { ...b, status } : b));
+
+    if (booking) {
+      if (status === 'cancelled') {
+        addNotification(booking.ownerId, "Khách hàng đã hủy đơn", `Đơn thuê ${booking.assetTitle} đã bị khách hàng hủy.`, "partner_alert");
+      } else if (status === 'approved') {
+        addNotification(booking.renterId, "Đơn thuê được chấp nhận", `Đơn thuê ${booking.assetTitle} đã được đối tác chấp nhận.`, "customer_success");
+      } else if (status === 'rejected') {
+        addNotification(booking.renterId, "Đơn thuê bị từ chối", `Đơn thuê ${booking.assetTitle} đã bị đối tác từ chối.`, "customer_alert");
+      } else if (status === 'returned') {
+        addNotification(booking.renterId, "Đơn thuê hoàn thành", `Cảm ơn bạn đã sử dụng ${booking.assetTitle}.`, "customer_success");
+      }
+    }
   };
 
   const sendTypingEvent = (threadId, isTyping, senderRole = 'customer') => {
@@ -1245,7 +1322,8 @@ export const StoreProvider = ({ children }) => {
         updateAssetDetails,
         currentCheckout,
         setCurrentCheckout,
-        updateUserProfile
+        updateUserProfile,
+        addNotification
       }}
     >
       {children}

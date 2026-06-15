@@ -1,14 +1,18 @@
 import React, { useState, useContext } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import PartnerDashboard from './PartnerDashboard';
-import { Lock, Mail, AlertCircle, LogOut, ArrowLeft, Globe, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, AlertCircle, LogOut, ArrowLeft, Globe, ShieldCheck, Bell } from 'lucide-react';
 
 export default function PartnerPortal() {
   const { 
     user, 
     loginUser, 
-    logoutUser 
+    logoutUser,
+    notifications,
+    markNotificationAsRead
   } = useContext(StoreContext);
+
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   // Login form state
   const [email, setEmail] = useState('');
@@ -105,29 +109,120 @@ export default function PartnerPortal() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                transition: 'color 0.2s'
+                transition: 'color 0.2s',
+                whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => e.target.style.color = '#ffffff'}
               onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
             >
               <ArrowLeft size={16} />
-              Quay lại Trang khách hàng (gearup.vn)
+              <span className="hide-on-mobile">Quay lại Trang khách hàng (gearup.vn)</span>
             </a>
 
             {user && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '12px',
-                borderLeft: '1px solid #334155',
-                paddingLeft: '20px'
-              }}>
+              <>
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#e2e8f0',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '8px',
+                      position: 'relative'
+                    }}
+                  >
+                    <Bell size={20} />
+                    {notifications.filter(n => n.type && n.type.startsWith('partner_') && !n.isRead).length > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        borderRadius: '50%',
+                        width: '16px',
+                        height: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {notifications.filter(n => n.type && n.type.startsWith('partner_') && !n.isRead).length}
+                      </span>
+                    )}
+                  </button>
+                  {showNotifDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '8px',
+                      width: '320px',
+                      backgroundColor: '#1e293b',
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                      border: '1px solid #334155',
+                      zIndex: 1000,
+                      maxHeight: '400px',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', fontWeight: 'bold', color: '#fff' }}>
+                        Thông báo
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {notifications.filter(n => n.type && n.type.startsWith('partner_')).length === 0 ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Không có thông báo nào</div>
+                        ) : (
+                          notifications.filter(n => n.type && n.type.startsWith('partner_')).map(n => {
+                            const isCancelled = n.title.toLowerCase().includes('hủy') || n.type === 'partner_alert';
+                            return (
+                              <div 
+                                key={n.id}
+                                onClick={() => { markNotificationAsRead(n.id); setShowNotifDropdown(false); }}
+                                style={{
+                                  padding: '12px 16px',
+                                  borderBottom: '1px solid #334155',
+                                  backgroundColor: isCancelled ? 'rgba(239, 68, 68, 0.15)' : (n.isRead ? 'transparent' : 'rgba(255, 120, 0, 0.05)'),
+                                  cursor: 'pointer',
+                                  transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = isCancelled ? 'rgba(239, 68, 68, 0.25)' : '#334155'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isCancelled ? 'rgba(239, 68, 68, 0.15)' : (n.isRead ? 'transparent' : 'rgba(255, 120, 0, 0.05)'); }}
+                              >
+                                <div style={{ fontSize: '13px', fontWeight: n.isRead ? '500' : '700', color: isCancelled ? '#fca5a5' : '#e2e8f0', marginBottom: '4px' }}>
+                                  {n.title}
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.4' }}>
+                                  {n.message}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  borderLeft: '1px solid #334155',
+                  paddingLeft: '20px'
+                }}>
                 <img 
                   src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'} 
                   alt={user.name} 
                   style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #ff7800' }}
                 />
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#e2e8f0' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#e2e8f0', whiteSpace: 'nowrap' }} className="shop-name-mobile">
                   {user.studioName || user.name}
                 </span>
                 
@@ -150,6 +245,7 @@ export default function PartnerPortal() {
                   <LogOut size={16} />
                 </button>
               </div>
+              </>
             )}
           </div>
         </div>
@@ -663,6 +759,11 @@ export default function PartnerPortal() {
           <p>© 2026 GearUp Partner Portal - Phân hệ dành riêng cho đối tác. Bản quyền thuộc về InnovateX.</p>
         </div>
       </footer>
+      <style>{`
+        @media (max-width: 768px) {
+          .hide-on-mobile { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

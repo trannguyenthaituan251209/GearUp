@@ -315,6 +315,21 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
                         filterDate={asset.status === 'paused' ? () => false : undefined}
                       />
                     </div>
+                    <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                      * Chú thích: Nếu thuê 1 ngày thì click vào ngày đó 2 lần.
+                    </div>
+                    
+                    {(startDate || endDate) && (
+                      <div style={{ marginTop: '12px', padding: '10px 12px', backgroundColor: 'var(--color-primary-light)', borderRadius: '6px', border: '1px dashed var(--color-primary)', fontSize: '14px', color: 'var(--color-dark)' }}>
+                        <div style={{ fontWeight: '600', color: 'var(--color-primary)', marginBottom: '4px' }}>Ngày đang chọn:</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: '600', color: 'var(--color-primary-active)' }}>{startDate ? new Date(startDate).toLocaleDateString('vi-VN') : '...'}</span>
+                          <span style={{ color: 'var(--color-text-muted)' }}>đến</span>
+                          <span style={{ fontWeight: '600', color: 'var(--color-primary-active)' }}>{endDate ? new Date(endDate).toLocaleDateString('vi-VN') : '...'}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {asset.status === 'paused' && (
                       <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--color-danger)' }}>
                         * Thiết bị hiện đang tạm dừng cho thuê.
@@ -623,6 +638,120 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
 
       {/* CSS Overrides for Detail Layout */}
       <style>{`
+        /* Custom Datepicker UI */
+        .custom-datepicker-container .react-datepicker {
+          border: 1px solid var(--color-border);
+          border-radius: 12px;
+          font-family: inherit;
+          padding: 16px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+          width: 100%;
+        }
+        .custom-datepicker-container .react-datepicker__month-container {
+          width: 100%;
+        }
+        .custom-datepicker-container .react-datepicker__header {
+          background-color: transparent;
+          border-bottom: none;
+          padding-top: 0;
+        }
+        .custom-datepicker-container .react-datepicker__current-month {
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--color-dark);
+          margin-bottom: 12px;
+        }
+        .custom-datepicker-container .react-datepicker__day-name {
+          color: var(--color-text-muted);
+          font-weight: 600;
+          width: 44px;
+          margin: 0;
+        }
+        .custom-datepicker-container .react-datepicker__day {
+          width: 44px;
+          height: 44px;
+          line-height: 44px;
+          margin: 0;
+          border-radius: 0 !important;
+          color: var(--color-dark);
+          font-weight: 500;
+          background-color: transparent;
+          border: none;
+        }
+        /* Hover on available days */
+        .custom-datepicker-container .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--excluded):not(.react-datepicker__day--in-range):not(.react-datepicker__day--selecting-range-start) {
+          background-image: radial-gradient(circle at center, #f1f5f9 20px, transparent 20.5px);
+        }
+        
+        /* Remove confusing default today highlight */
+        .custom-datepicker-container .react-datepicker__day--keyboard-selected {
+          background-color: transparent !important;
+          color: inherit !important;
+        }
+        .custom-datepicker-container .react-datepicker__day--today:not(.react-datepicker__day--in-range):not(.react-datepicker__day--selecting-range-start) {
+          background-image: radial-gradient(circle at center, transparent 19px, var(--color-primary) 19.5px, var(--color-primary) 21px, transparent 21.5px) !important;
+        }
+
+        /* Kín lịch - Đỏ hồng */
+        .custom-datepicker-container .react-datepicker__day--excluded {
+          background-image: radial-gradient(circle at center, #ffe4e6 20px, transparent 20.5px) !important;
+          background-color: transparent !important;
+          color: #e11d48 !important;
+          font-weight: 700;
+        }
+
+        /* Không khả dụng - Xám */
+        .custom-datepicker-container .react-datepicker__day--disabled {
+          color: #cbd5e1 !important;
+          background-color: transparent !important;
+          text-decoration: line-through;
+        }
+
+        /* Đang chọn - Timeline effect */
+        .custom-datepicker-container .react-datepicker__day--in-range,
+        .custom-datepicker-container .react-datepicker__day--in-selecting-range {
+          background-image: linear-gradient(to bottom, transparent 10px, #e0f2fe 10px, #e0f2fe 34px, transparent 34px) !important;
+          background-color: transparent !important;
+          color: var(--color-primary) !important;
+          font-weight: 700;
+        }
+
+        /* Start nodes - Phình to, Xanh nước biển lõi trắng */
+        .custom-datepicker-container .react-datepicker__day--range-start,
+        .custom-datepicker-container .react-datepicker__day--selecting-range-start {
+          background-image: 
+            radial-gradient(circle at center, #ffffff 17px, var(--color-primary) 17.5px, var(--color-primary) 21.5px, transparent 22px),
+            linear-gradient(to bottom, transparent 10px, #e0f2fe 10px, #e0f2fe 34px, transparent 34px) !important;
+          background-position: center, 22px center !important;
+          background-size: 100% 100%, 22px 100% !important;
+          background-repeat: no-repeat !important;
+          background-color: transparent !important;
+          color: var(--color-primary) !important;
+        }
+
+        /* End nodes - Phình to, Xanh nước biển lõi trắng */
+        .custom-datepicker-container .react-datepicker__day--range-end,
+        .custom-datepicker-container .react-datepicker__day--selecting-range-end {
+          background-image: 
+            radial-gradient(circle at center, #ffffff 17px, var(--color-primary) 17.5px, var(--color-primary) 21.5px, transparent 22px),
+            linear-gradient(to bottom, transparent 10px, #e0f2fe 10px, #e0f2fe 34px, transparent 34px) !important;
+          background-position: center, 0px center !important;
+          background-size: 100% 100%, 22px 100% !important;
+          background-repeat: no-repeat !important;
+          background-color: transparent !important;
+          color: var(--color-primary) !important;
+        }
+
+        /* Same day start and end */
+        .custom-datepicker-container .react-datepicker__day--range-start.react-datepicker__day--range-end,
+        .custom-datepicker-container .react-datepicker__day--selecting-range-start.react-datepicker__day--selecting-range-end {
+          background-image: radial-gradient(circle at center, #ffffff 17px, var(--color-primary) 17.5px, var(--color-primary) 21.5px, transparent 22px) !important;
+          background-size: 100% 100% !important;
+          background-position: center !important;
+          background-color: transparent !important;
+          color: var(--color-primary) !important;
+        }
+
         @media (max-width: 900px) {
           .detail-top {
             grid-template-columns: 1fr !important;
