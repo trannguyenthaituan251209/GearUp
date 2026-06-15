@@ -507,6 +507,10 @@ export const StoreProvider = ({ children }) => {
           return [...prev, mapMessageFromDB(newMsg)];
         });
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+        const updatedMsg = payload.new;
+        setMessages(prev => prev.map(m => m.id === updatedMsg.id ? { ...m, status: updatedMsg.status || m.status } : m));
+      })
       .subscribe((status, err) => {
         console.log('[Supabase Realtime] messages channel status:', status, err);
         if (status === 'SUBSCRIBED') {

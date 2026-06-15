@@ -1066,7 +1066,7 @@ export default function PartnerDashboard() {
                     className="form-control"
                     placeholder="Nhập phản hồi..."
                     value={chatReplyText}
-                    onChange={(e) => setChatReplyText(e.target.value)}
+                    onChange={handleTyping}
                     style={{ flexGrow: 1, borderRadius: '99px' }}
                     required
                   />
