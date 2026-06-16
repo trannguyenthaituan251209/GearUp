@@ -61,7 +61,8 @@ const mapBookingFromDB = (b) => ({
   renterContact: b.renter_contact,
   renterId: b.renter_id,
   status: b.status,
-  createdAt: b.created_at
+  createdAt: b.created_at,
+  contractUrl: b.contract_url
 });
 
 const mapBookingToDB = (b) => ({
@@ -77,7 +78,8 @@ const mapBookingToDB = (b) => ({
   renter_contact: b.renterContact,
   renter_id: b.renterId,
   status: b.status,
-  created_at: b.createdAt
+  created_at: b.createdAt || new Date().toISOString(),
+  contract_url: b.contractUrl || null
 });
 
 const mapMessageFromDB = (m) => ({
@@ -313,7 +315,9 @@ export const StoreProvider = ({ children }) => {
             address: (useCache ? cachedUser.address : null) || metadata.address || '',
             favorites: (useCache ? cachedUser.favorites : null) || metadata.favorites || [],
             subscriptionTier: (useCache ? cachedUser.subscriptionTier : null) || metadata.subscriptionTier || 'free',
-            subscriptionEnd: (useCache ? cachedUser.subscriptionEnd : null) || metadata.subscriptionEnd || null
+            subscriptionEnd: (useCache ? cachedUser.subscriptionEnd : null) || metadata.subscriptionEnd || null,
+            contractTemplate: (useCache ? cachedUser.contractTemplate : null) || metadata.contractTemplate || '',
+            contractTemplates: (useCache ? cachedUser.contractTemplates : null) || metadata.contractTemplates || []
           };
 
           // Cache the verified user session details
@@ -365,7 +369,9 @@ export const StoreProvider = ({ children }) => {
                   favorites: prev.favorites || [],
                   generalPolicy: data?.general_policy || prev.generalPolicy,
                   subscriptionTier: subData?.tier || data?.subscription_tier || prev.subscriptionTier || 'free',
-                  subscriptionEnd: subData?.current_period_end || data?.subscription_end || prev.subscriptionEnd || null
+                  subscriptionEnd: subData?.current_period_end || data?.subscription_end || prev.subscriptionEnd || null,
+                  contractTemplate: data?.contract_template || prev.contractTemplate || '',
+                  contractTemplates: data?.contract_templates || prev.contractTemplates || []
                 };
                 localStorage.setItem('gearup_current_user', JSON.stringify(merged));
                 return merged;
@@ -746,6 +752,7 @@ export const StoreProvider = ({ children }) => {
             address: updatedUser.address,
             favorites: updatedUser.favorites,
             generalPolicy: updatedUser.generalPolicy
+            // Removed contractTemplate and contractTemplates to avoid 400 Bad Request due to user_metadata size limits
           }
         });
       }
@@ -756,7 +763,9 @@ export const StoreProvider = ({ children }) => {
         avatar: updatedUser.avatar,
         citizen_id: updatedUser.citizenId,
         studio_name: updatedUser.studioName,
-        general_policy: updatedUser.generalPolicy
+        general_policy: updatedUser.generalPolicy,
+        contract_template: updatedUser.contractTemplate,
+        contract_templates: updatedUser.contractTemplates
       }).eq('id', user.id);
       
       if (error) {
@@ -1063,7 +1072,7 @@ export const StoreProvider = ({ children }) => {
         id: `msg-${Date.now()}`,
         assetId,
         assetTitle,
-        senderName: senderName || user?.name,
+        senderName: senderName || user?.studio_name || user?.name,
         text,
         status: 'sent',
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),

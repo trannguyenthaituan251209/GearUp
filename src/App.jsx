@@ -21,6 +21,7 @@ import SearchResult from './pages/SearchResult';
 import PartnerProfile from './pages/PartnerProfile';
 import AuthModal from './components/AuthModal';
 import CskhChatModal from './components/CskhChatModal';
+import Contract from './pages/Contract';
 
 function MainAppContent() {
   const isPartnerPortal = 
@@ -148,6 +149,8 @@ function MainAppContent() {
             setCurrentPage={setCurrentPage} 
           />
         );
+      case 'contract':
+        return <Contract setCurrentPage={setCurrentPage} />;
       case 'search-result':
         return (
           <SearchResult 

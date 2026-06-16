@@ -29,9 +29,11 @@ import {
   Trash2,
   CheckCircle2,
   CheckCheck,
-  Menu
+  Menu,
+  FileText
 } from 'lucide-react';
 import AssetEditModal from '../components/AssetEditModal';
+import ContractSettings from '../components/ContractSettings';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
@@ -568,6 +570,13 @@ export default function PartnerDashboard() {
                         )}
                       </>
                     )}
+                    
+                    {b.contractUrl ? (
+                       <button title="Xem Hợp Đồng" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }} onClick={() => window.open(b.contractUrl, '_blank')}><FileText size={14}/></button>
+                    ) : (
+                       <button title="Không có hợp đồng đính kèm" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', borderColor: 'var(--color-border)', cursor: 'not-allowed', opacity: 0.5 }} disabled><FileText size={14}/></button>
+                    )}
+
                     <button title="Nhắn tin cho khách" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => {
                         setChatSelectedAssetId(b.renterId);
                         setActiveTab('chat');
@@ -997,15 +1006,15 @@ export default function PartnerDashboard() {
       if (!chatReplyText.trim() || !chatSelectedAssetId) return;
       
       let finalMessage = chatReplyText.trim();
-      addMessage(
-        selectedThread.assetId,
-        selectedThread.assetTitle,
-        user?.name || 'Partner',
-        finalMessage,
-        user?.id,
-        selectedThread.customerId,
-        selectedThread.customerId
-      );
+        addMessage(
+          selectedThread.assetId,
+          selectedThread.assetTitle,
+          user?.studio_name || user?.name || 'Partner',
+          finalMessage,
+          user?.id,
+          selectedThread.customerId,
+          selectedThread.customerId
+        );
       setChatReplyText('');
     };
 
@@ -1247,7 +1256,8 @@ export default function PartnerDashboard() {
             { id: 'listings', icon: Package, label: 'Thiết Bị Của Tôi' },
             { id: 'orders', icon: ShoppingCart, label: 'Đơn Hàng' },
             { id: 'chat', icon: MessageSquare, label: 'Tin Nhắn' },
-            { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' }
+            { id: 'wallet', icon: Wallet, label: 'Ví & Dòng Tiền' },
+            { id: 'contract', icon: FileText, label: 'Mẫu Hợp Đồng' }
           ].map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -1286,6 +1296,7 @@ export default function PartnerDashboard() {
         {activeTab === 'orders' && renderOrders()}
         {activeTab === 'chat' && renderChat()}
         {activeTab === 'wallet' && renderWallet()}
+        {activeTab === 'contract' && <ContractSettings />}
         {activeTab === 'add-new' && renderAddNew()}
       </main>
 

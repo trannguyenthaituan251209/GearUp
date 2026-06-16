@@ -161,11 +161,11 @@ export default function CustomerDashboard() {
       seenPartners.add(partnerId);
       // Find partner info
       let partnerName = 'Đối tác GearUp';
-      if (msg.senderId === partnerId && msg.senderName) {
+      const partnerAsset = assets.find(a => a.id === msg.assetId);
+      if (partnerAsset && partnerAsset.ownerName) {
+         partnerName = partnerAsset.ownerName;
+      } else if (msg.senderId === partnerId && msg.senderName) {
          partnerName = msg.senderName;
-      } else {
-         const asset = assets.find(a => a.id === msg.assetId);
-         if (asset && asset.ownerName) partnerName = asset.ownerName;
       }
       const asset = assets.find(a => a.id === msg.assetId);
       chatThreads.push({
@@ -672,7 +672,9 @@ export default function CustomerDashboard() {
 
                       return (
                         <div key={msg.id} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{msg.senderName} • {msg.timestamp}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                            {isMe ? 'Bạn' : (selectedThread?.ownerName || msg.senderName)} • {msg.timestamp}
+                          </div>
                           <div style={{ 
                             backgroundColor: isMe ? 'var(--color-primary)' : '#f1f5f9', 
                             color: isMe ? '#ffffff' : 'var(--color-text-primary)', 

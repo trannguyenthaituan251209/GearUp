@@ -162,8 +162,12 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       }
     }
 
-    setStartDate(start ? start.toISOString().split('T')[0] : '');
-    setEndDate(end ? end.toISOString().split('T')[0] : '');
+      const formatLocal = (d) => {
+        const pad = n => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+      setStartDate(start ? formatLocal(start) : '');
+      setEndDate(end ? formatLocal(end) : '');
   };
 
   // If asset not found
@@ -215,7 +219,7 @@ export default function AssetDetail({ assetId, setCurrentPage }) {
       ownerId: asset.ownerId
     });
 
-    setCurrentPage('checkout');
+    setCurrentPage('contract');
   };
 
   const handleSendMessage = (e) => {
