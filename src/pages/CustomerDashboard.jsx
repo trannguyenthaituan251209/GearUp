@@ -8,6 +8,7 @@ import {
   MapPin, 
   CreditCard, 
   Trash2, 
+  FileText,
   Send, 
   CheckCircle2, 
   Clock, 
@@ -70,7 +71,7 @@ const PartnerContactInfo = ({ assetId, isVisible }) => {
 };
 
 export default function CustomerDashboard() {
-  const { user, bookings, updateBookingStatus, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent, assets, submitReview } = useContext(StoreContext);
+  const { user, bookings, updateBookingStatus, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent, assets, submitReview, handleViewContract } = useContext(StoreContext);
 
   const [userReviews, setUserReviews] = useState([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -531,6 +532,26 @@ export default function CustomerDashboard() {
                           )
                         )}
 
+                        {booking.contractUrl ? (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
+                            onClick={() => handleViewContract(booking.contractUrl)}
+                          >
+                            <FileText size={13} />
+                            <span>Xem Hợp Đồng</span>
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)', borderColor: 'var(--color-border)', cursor: 'not-allowed', opacity: 0.5 }}
+                            disabled
+                            title="Không có hợp đồng đính kèm"
+                          >
+                            <FileText size={13} />
+                            <span>Xem Hợp Đồng</span>
+                          </button>
+                        )}
                         <button
                           className="btn btn-outline btn-sm"
                           style={{ display: 'flex', alignItems: 'center', gap: '4px' }}

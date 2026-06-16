@@ -37,7 +37,7 @@ import ContractSettings from '../components/ContractSettings';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 export default function PartnerDashboard() {
-  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, deleteAsset, addAsset, updateAssetDetails, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent } = useContext(StoreContext);
+  const { user, assets, bookings, updateBookingStatus, updateAssetStatus, deleteAsset, addAsset, updateAssetDetails, messages, addMessage, markMessagesAsSeen, typingStatus, sendTypingEvent, handleViewContract } = useContext(StoreContext);
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -572,7 +572,7 @@ export default function PartnerDashboard() {
                     )}
                     
                     {b.contractUrl ? (
-                       <button title="Xem Hợp Đồng" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }} onClick={() => window.open(b.contractUrl, '_blank')}><FileText size={14}/></button>
+                       <button title="Xem Hợp Đồng" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }} onClick={() => handleViewContract(b.contractUrl)}><FileText size={14}/></button>
                     ) : (
                        <button title="Không có hợp đồng đính kèm" className="btn btn-outline btn-sm" style={{ padding: '0', height: '26px', width: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', borderColor: 'var(--color-border)', cursor: 'not-allowed', opacity: 0.5 }} disabled><FileText size={14}/></button>
                     )}

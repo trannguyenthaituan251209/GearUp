@@ -140,100 +140,15 @@ export default function Home({ setCurrentPage, setSelectedAssetId, filters, setF
   const homeHorizontal3 = banners?.find(b => b.position === 'horizontal_3' && b.isActive);
   const [flashSaleTab, setFlashSaleTab] = useState('Nikon');
 
-  const MOCK_FLASH_SALE_ASSETS = [
-    {
-      id: 'mock-n1', brand: 'Nikon',
-      title: 'Máy Ảnh Nikon Z9 Body Chính Hãng (Quay 8K)',
-      imageUrl: 'https://images.unsplash.com/photo-1617005082833-1eb585703f4c?w=400&q=80',
-      pricePerDay: 1500000, oldPrice: 1800000, discount: 'Tiết kiệm 300.000 đ', rating: 4.9
-    },
-    {
-      id: 'mock-n2', brand: 'Nikon',
-      title: 'Nikon Z8 Body - Thiết Kế Nhỏ Gọn Sức Mạnh Khủng',
-      imageUrl: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=400&q=80',
-      pricePerDay: 1200000, oldPrice: 1500000, discount: 'Tiết kiệm 300.000 đ', rating: 4.8
-    },
-    {
-      id: 'mock-n3', brand: 'Nikon',
-      title: 'Máy Ảnh Nikon Z7 II (Z7 2) Body Cũ Đẹp',
-      imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&q=80',
-      pricePerDay: 800000, oldPrice: 950000, discount: 'Tiết kiệm 150.000 đ', rating: 4.7
-    },
-    {
-      id: 'mock-n4', brand: 'Nikon',
-      title: 'Ống Kính Nikon NIKKOR Z 24-70mm f/2.8 S',
-      imageUrl: 'https://images.unsplash.com/photo-1616423640778-28d1b53229bd?w=400&q=80',
-      pricePerDay: 500000, oldPrice: 650000, discount: 'Tiết kiệm 150.000 đ', rating: 4.9
-    },
-    {
-      id: 'mock-n5', brand: 'Nikon',
-      title: 'Nikon Zfc Kit 16-50mm f/3.5-6.3 VR Phong Cách Retro',
-      imageUrl: 'https://images.unsplash.com/photo-1542567455-cd733f23fbb1?w=400&q=80',
-      pricePerDay: 400000, oldPrice: 500000, discount: 'Tiết kiệm 100.000 đ', rating: 4.8
-    },
-    {
-      id: 'mock-c1', brand: 'Canon',
-      title: 'Máy Ảnh Canon EOS R5 Body - Đỉnh Cao Quay Chụp',
-      imageUrl: 'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=400&q=80',
-      pricePerDay: 1400000, oldPrice: 1700000, discount: 'Tiết kiệm 300.000 đ', rating: 5.0
-    },
-    {
-      id: 'mock-c2', brand: 'Canon',
-      title: 'Máy Ảnh Canon EOS R6 Mark II Tốc Độ Siêu Nhanh',
-      imageUrl: 'https://images.unsplash.com/photo-1500634245200-e5245c7574ef?w=400&q=80',
-      pricePerDay: 1000000, oldPrice: 1200000, discount: 'Tiết kiệm 200.000 đ', rating: 4.9
-    },
-    {
-      id: 'mock-c3', brand: 'Canon',
-      title: 'Canon EOS RP Kèm Lens 24-105mm Dành Cho Người Mới',
-      imageUrl: 'https://images.unsplash.com/photo-1519638831568-d9897f54ed69?w=400&q=80',
-      pricePerDay: 450000, oldPrice: 600000, discount: 'Tiết kiệm 150.000 đ', rating: 4.6
-    },
-    {
-      id: 'mock-c4', brand: 'Canon',
-      title: 'Ống Kính Canon RF 70-200mm f/2.8L IS USM',
-      imageUrl: 'https://images.unsplash.com/photo-1621287955546-276f62ea129e?w=400&q=80',
-      pricePerDay: 600000, oldPrice: 800000, discount: 'Tiết kiệm 200.000 đ', rating: 4.9
-    },
-    {
-      id: 'mock-c5', brand: 'Canon',
-      title: 'Canon EOS R50 Cực Kỳ Nhỏ Gọn Dành Cho Vlogger',
-      imageUrl: 'https://images.unsplash.com/photo-1560599181-424a56a6a978?w=400&q=80',
-      pricePerDay: 300000, oldPrice: 400000, discount: 'Tiết kiệm 100.000 đ', rating: 4.7
-    },
-    {
-      id: 'mock-f1', brand: 'Fujifilm',
-      title: 'Máy Ảnh Fujifilm X-T5 Cảm Biến 40MP Đỉnh Cao',
-      imageUrl: 'https://images.unsplash.com/photo-1566807810034-cb5fa887754b?w=400&q=80',
-      pricePerDay: 600000, oldPrice: 750000, discount: 'Tiết kiệm 150.000 đ', rating: 4.9
-    },
-    {
-      id: 'mock-f2', brand: 'Fujifilm',
-      title: 'Fujifilm X100V Bạc Xịn Xò Chụp Đường Phố',
-      imageUrl: 'https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=400&q=80',
-      pricePerDay: 800000, oldPrice: 1000000, discount: 'Tiết kiệm 200.000 đ', rating: 5.0
-    },
-    {
-      id: 'mock-f3', brand: 'Fujifilm',
-      title: 'Máy Ảnh Fujifilm X-H2S Quay Phim Chuyên Nghiệp',
-      imageUrl: 'https://images.unsplash.com/photo-1587841517743-f8f4842b1016?w=400&q=80',
-      pricePerDay: 900000, oldPrice: 1100000, discount: 'Tiết kiệm 200.000 đ', rating: 4.8
-    },
-    {
-      id: 'mock-f4', brand: 'Fujifilm',
-      title: 'Ống Kính Fujinon XF 33mm f/1.4 R LM WR',
-      imageUrl: 'https://images.unsplash.com/photo-1498028045864-4e782ca7099b?w=400&q=80',
-      pricePerDay: 250000, oldPrice: 350000, discount: 'Tiết kiệm 100.000 đ', rating: 4.8
-    },
-    {
-      id: 'mock-f5', brand: 'Fujifilm',
-      title: 'Fujifilm X-T30 II Kèm Lens 15-45mm Gọn Nhẹ',
-      imageUrl: 'https://images.unsplash.com/photo-1586221199587-b95c3b49cbb6?w=400&q=80',
-      pricePerDay: 350000, oldPrice: 450000, discount: 'Tiết kiệm 100.000 đ', rating: 4.7
-    }
-  ];
-
-  const currentFlashSaleAssets = MOCK_FLASH_SALE_ASSETS.filter(a => a.brand === flashSaleTab);
+  const currentFlashSaleAssets = assets
+    .filter(a => a.title.toLowerCase().includes(flashSaleTab.toLowerCase()) || (a.category && a.category.toLowerCase().includes(flashSaleTab.toLowerCase())))
+    .slice(0, 4)
+    .map(a => ({
+      ...a,
+      oldPrice: a.pricePerDay * 1.2,
+      discount: `Tiết kiệm ${new Intl.NumberFormat('vi-VN').format(a.pricePerDay * 0.2)} đ`,
+      brand: flashSaleTab
+    }));
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
 

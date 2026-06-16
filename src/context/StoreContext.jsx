@@ -177,7 +177,22 @@ export const StoreProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [typingStatus, setTypingStatus] = React.useState({});
   const typingChannelRef = React.useRef(null);
-  const [currentCheckout, setCurrentCheckout] = useState(null);
+  const [currentCheckout, setCurrentCheckout] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gearup_checkout');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (currentCheckout) {
+      localStorage.setItem('gearup_checkout', JSON.stringify(currentCheckout));
+    } else {
+      localStorage.removeItem('gearup_checkout');
+    }
+  }, [currentCheckout]);
   
   // Favorites & Notifications States
   const [favorites, setFavorites] = useState(() => {
@@ -1279,6 +1294,28 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const handleViewContract = async (url) => {
+    if (!url) return;
+    const newWin = window.open('', '_blank');
+    if (!newWin) {
+      // If popup blocker prevents opening new window, fallback to location href
+      window.location.href = url;
+      return;
+    }
+    newWin.document.write('<html><head><title>Đang tải hợp đồng...</title></head><body style="font-family: sans-serif; text-align: center; padding: 50px;">Đang tải hợp đồng...</body></html>');
+    
+    try {
+      const res = await fetch(url);
+      const htmlText = await res.text();
+      newWin.document.open();
+      newWin.document.write(htmlText);
+      newWin.document.close();
+    } catch (err) {
+      console.error("Fetch contract failed, fallback to url:", err);
+      newWin.location.href = url;
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -1295,6 +1332,7 @@ export const StoreProvider = ({ children }) => {
         toggleFavorite,
         markNotificationAsRead,
         updateUserSubscription,
+        handleViewContract,
         showAuthModal,
         setShowAuthModal,
         showPartnerModal,

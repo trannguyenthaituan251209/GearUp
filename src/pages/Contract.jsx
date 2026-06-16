@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { StoreContext } from '../context/StoreContext';
 import SignatureCanvas from 'react-signature-canvas';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { FileText, CheckCircle, ArrowLeft, Download, XCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import 'react-quill-new/dist/quill.snow.css';
@@ -16,7 +14,6 @@ export default function Contract({ setCurrentPage }) {
   const [partnerProfile, setPartnerProfile] = useState(null);
   const [showReview, setShowReview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState(null);
   const sigCanvas = useRef(null);
   const contractRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -72,7 +69,7 @@ export default function Contract({ setCurrentPage }) {
     if (!rawTemplate) return;
     
     const standardVars = [
-      'TEN_CHU_THUE', 'TEN_KHACH_HANG', 'SDT_KHACH_HANG', 'CCCD_KHACH_HANG',
+      'TEN_CHU_THUE', 'TEN_KHACH_HANG', 'SDT_KHACH_HANG',
       'TEN_THIET_BI', 'NGAY_BAT_DAU', 'NGAY_KET_THUC', 'TONG_TIEN',
       'SDT_CHU_THUE', 'CCCD_CHU_THUE', 'DIA_CHI_CHU_THUE'
     ];
@@ -86,8 +83,7 @@ export default function Contract({ setCurrentPage }) {
     processed = processed.replace(/{{DIA_CHI_CHU_THUE}}/g, partnerProfile?.address || '');
     
     processed = processed.replace(/{{TEN_KHACH_HANG}}/g, currentCheckout?.renterName || '');
-    processed = processed.replace(/{{SDT_KHACH_HANG}}/g, currentCheckout?.renterPhone || '');
-    processed = processed.replace(/{{CCCD_KHACH_HANG}}/g, currentCheckout?.renterId || '(Chưa cung cấp)');
+    processed = processed.replace(/{{SDT_KHACH_HANG}}/g, currentCheckout?.renterPhone || currentCheckout?.renterContact || '');
     processed = processed.replace(/{{TEN_THIET_BI}}/g, currentCheckout?.assetTitle || '');
     processed = processed.replace(/{{NGAY_BAT_DAU}}/g, currentCheckout?.startDate || '');
     processed = processed.replace(/{{NGAY_KET_THUC}}/g, currentCheckout?.endDate || '');
@@ -135,56 +131,48 @@ export default function Contract({ setCurrentPage }) {
   const handleSignAndGeneratePdf = async () => {
     setIsProcessing(true);
     try {
-      if (wrapperRef.current) {
-        wrapperRef.current.style.maxHeight = 'none';
-        wrapperRef.current.style.overflowY = 'visible';
-      }
+      // 1. Get raw HTML of contract and embed signature
+      const htmlContentBody = contractRef.current.innerHTML;
       
-      // wait for browser to apply styles
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const fullHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hợp Đồng Thuê Thiết Bị - ${currentCheckout.assetTitle}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <style>
+    body { background: #ffffff; padding: 40px; margin: 0; }
+    .contract-container { 
+      font-family: 'Times New Roman', serif;
+      max-width: 100%; 
+      margin: 0 auto; 
+      line-height: 1.6; 
+      color: #000; 
+      font-size: 15px; 
+    }
+    .ql-editor { padding: 0 !important; font-family: 'Times New Roman', serif !important; }
+    @media print {
+      body { padding: 0; }
+      @page { margin: 15mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="contract-container">
+    ${htmlContentBody}
+  </div>
+</body>
+</html>`;
 
-      // 1. Convert html to canvas
-      const canvas = await html2canvas(contractRef.current, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-
-      if (wrapperRef.current) {
-        wrapperRef.current.style.maxHeight = '70vh';
-        wrapperRef.current.style.overflowY = 'auto';
-      }
+      // 2. Save as Blob (HTML)
+      const htmlBlob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
       
-      // 2. Add to jsPDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: 'a4'
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      // 3. Save as Blob
-      const pdfBlob = pdf.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      setPdfUrl(url);
-
       // Upload to Supabase Storage
-      const fileName = `contract_${currentCheckout.id || Date.now()}_${Math.floor(Math.random()*1000)}.pdf`;
-      const { data, error } = await supabase.storage.from('contracts').upload(fileName, pdfBlob, {
-        contentType: 'application/pdf'
+      const fileName = `contract_${currentCheckout.id || Date.now()}_${Math.floor(Math.random()*1000)}.html`;
+      const { data, error } = await supabase.storage.from('contracts').upload(fileName, htmlBlob, {
+        contentType: 'text/html'
       });
       
       if (!error) {
@@ -200,16 +188,31 @@ export default function Contract({ setCurrentPage }) {
       setIsProcessing(false);
       setShowReview(false);
       
-      // Trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Hop_Dong_Thue_Thiet_Bi_${currentCheckout.assetTitle}.pdf`;
-      link.click();
-
-      // Proceed to checkout
+      // 3. Print natively via hidden iframe to avoid CSS bleeding from main app
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+      
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(fullHtml);
+      iframe.contentWindow.document.close();
+      
+      // Wait for Tailwind to load inside iframe before printing
       setTimeout(() => {
-        setCurrentPage('checkout');
-      }, 1500);
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        
+        // Proceed to checkout
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          setCurrentPage('checkout');
+        }, 1000);
+      }, 500);
 
     } catch (err) {
       console.error(err);
@@ -318,7 +321,7 @@ export default function Contract({ setCurrentPage }) {
         <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>Người Thuê (Ký và ghi rõ họ tên)</p>
-            {showReview || pdfUrl ? (
+            {showReview || currentCheckout?.contractUrl ? (
                <img src={sigCanvas.current?.getCanvas().toDataURL('image/png')} alt="Chữ ký" style={{ height: '100px', objectFit: 'contain' }} />
             ) : (
                <div style={{ border: '1px dashed #ccc', backgroundColor: '#f9fafb', borderRadius: '4px' }}>
@@ -329,7 +332,7 @@ export default function Contract({ setCurrentPage }) {
                  />
                </div>
             )}
-            {!showReview && !pdfUrl && (
+            {!showReview && !currentCheckout?.contractUrl && (
               <button onClick={handleClearSignature} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '4px', cursor: 'pointer', textDecoration: 'underline' }}>
                 Xóa chữ ký
               </button>
@@ -340,7 +343,7 @@ export default function Contract({ setCurrentPage }) {
       </div>
       </div>
 
-      {!pdfUrl && (
+      {!currentCheckout?.contractUrl && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button onClick={handleReview} className="btn btn-primary" style={{ padding: '14px 40px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle size={20} /> Xác Nhận & Xem Trước
@@ -348,7 +351,7 @@ export default function Contract({ setCurrentPage }) {
         </div>
       )}
 
-      {pdfUrl && (
+      {currentCheckout?.contractUrl && (
         <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'var(--color-success-light)', borderRadius: '8px', color: 'var(--color-success)', fontWeight: '600' }}>
           Đã ký thành công! Đang chuyển sang trang thanh toán...
         </div>
